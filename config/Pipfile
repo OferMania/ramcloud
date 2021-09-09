@@ -1,0 +1,19 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+docker = "*"
+grpcio = "*"
+grpcio-tools = "*"
+kazoo = "*"
+pyaml = "*"
+pyexpect = "*"
+pylint = "*"
+timeout-decorator = "*"
+
+[requires]
+python_version = "3.9"

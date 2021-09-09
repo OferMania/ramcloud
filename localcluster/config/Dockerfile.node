@@ -1,0 +1,230 @@
+# This was taken directly from the official Dockerfile from debian:
+#   https://github.com/31z4/zookeeper-docker/blob/master/3.5.5/Dockerfile
+#
+# The following changes were made:
+#   * Change FROM from "openjdk:8-jre-slim" to "debian:buster"
+#   * Install openjdk-11-jre-headless
+#   * Change local location of docker-entrypoint.sh from 'docker-entrypoint.sh' to 'config/docker-entrypoint.sh'
+FROM debian:bullseye as zookeeper
+
+ENV BOOST_VERSION="1.74.0" \
+    PROTO_VERSION=23 \
+    CLANG_VERSION="11"
+
+ENV ZOO_CONF_DIR="/conf" \
+    ZOO_DATA_DIR="/data" \
+    ZOO_DATA_LOG_DIR="/datalog" \
+    ZOO_LOG_DIR="/logs" \
+    ZOO_TICK_TIME=2000 \
+    ZOO_INIT_LIMIT=5 \
+    ZOO_SYNC_LIMIT=2 \
+    ZOO_AUTOPURGE_PURGEINTERVAL=0 \
+    ZOO_AUTOPURGE_SNAPRETAINCOUNT=3 \
+    ZOO_MAX_CLIENT_CNXNS=60 \
+    ZOO_STANDALONE_ENABLED="true" \
+    ZOO_ADMINSERVER_ENABLED="true"
+
+# Add a user with an explicit UID/GID and create necessary directories
+RUN set -eux; \
+    groupadd -r zookeeper --gid=1000; \
+    useradd -r -g zookeeper --uid=1000 zookeeper; \
+    mkdir -p "${ZOO_DATA_LOG_DIR}" "${ZOO_DATA_DIR}" "${ZOO_CONF_DIR}" "${ZOO_LOG_DIR}"; \
+    chown zookeeper:zookeeper "${ZOO_DATA_LOG_DIR}" "${ZOO_DATA_DIR}" "${ZOO_CONF_DIR}" "${ZOO_LOG_DIR}"
+
+# Most of the lib packages below are needed to prevent linker errors in RAMCloud
+RUN apt-get update \
+ && apt-get install --yes \
+      libboost-filesystem-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      libboost-program-options"${BOOST_VERSION}" \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      libboost-program-options-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      libboost-system-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      clang \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      clang-format-"${CLANG_VERSION}" \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+        libibverbs1 \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      libpcrecpp0v5 \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      libpcap-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      libpcre++-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      libprotobuf"${PROTO_VERSION}" \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      libprotobuf-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      libprotoc-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      protobuf-compiler \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      iputils-ping \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      nmap \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      sudo \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      libssl-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+# RUN apt-get update \
+#  && apt-get install --yes \
+#       libzkpp0.2 \
+#  && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      libzookeeper-mt2 \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      procps \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      supervisor \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      dirmngr \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      gnupg \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      net-tools \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      netbase \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      openjdk-11-jre-headless \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+ && apt-get install --yes \
+      wget \
+ && rm -rf /var/lib/apt/lists/*
+
+
+# NOTE: This command works in debian:buster and nfapp dev-env, but fails spectacularly when you use
+# statelesstestregistry.azurecr.io/stateless on this file, and I cannot figure out why to save my
+# life (and recall from earlier that we NEED base to make sure RAMCloud links without crash)
+#    apt-get install --yes gosu 
+# To get around this problem, we manually install gosu 1.12 from github using a snippet coped from:
+# https://github.com/tianon/gosu/blob/master/INSTALL.md
+
+ARG GOSU_VERSION=1.12
+RUN set -eux; \
+    dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
+    wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
+    chmod +x /usr/local/bin/gosu; \
+    gosu --version; \
+    gosu nobody true
+
+# Below is the version of ZK that is confirmed to work inside the docker image with rc-coordinator.
+# apt-get install on ZK never worked, even in RAMCloud dev-env, and even the legendary Aaron Jones
+# could not figure out why
+
+ARG GPG_KEY=3F7A1D16FA4217B1DC75E1C9FFE35B7F15DFA1BA
+ARG SHORT_DISTRO_NAME=zookeeper-3.5.8
+ARG DISTRO_NAME=apache-zookeeper-3.5.8-bin
+
+# Download Apache Zookeeper, verify its PGP signature, untar and clean up
+RUN set -eux; \
+    wget -q "http://archive.apache.org/dist/zookeeper/$SHORT_DISTRO_NAME/$DISTRO_NAME.tar.gz"; \
+    wget -q "http://archive.apache.org/dist/zookeeper/$SHORT_DISTRO_NAME/$DISTRO_NAME.tar.gz.asc"; \
+    export GNUPGHOME="$(mktemp -d)"; \
+# Removing these checks because the GPG_KEY value above is no longer correct for the 3.5.7 ZK package
+#    gpg --keyserver ha.pool.sks-keyservers.net --recv-key "$GPG_KEY" || \
+#    gpg --keyserver pgp.mit.edu --recv-keys "$GPG_KEY" || \
+#    gpg --keyserver keyserver.pgp.com --recv-keys "$GPG_KEY"; \
+#    gpg --batch --verify "$DISTRO_NAME.tar.gz.asc" "$DISTRO_NAME.tar.gz"; \
+    tar -zxf "$DISTRO_NAME.tar.gz"; \
+    mv "$DISTRO_NAME/conf/"* "$ZOO_CONF_DIR"; \
+    rm -rf "$GNUPGHOME" "$DISTRO_NAME.tar.gz" "$DISTRO_NAME.tar.gz.asc"; \
+    chown -R zookeeper:zookeeper "/$DISTRO_NAME"
+
+WORKDIR $DISTRO_NAME
+VOLUME ["$ZOO_DATA_DIR", "$ZOO_DATA_LOG_DIR", "$ZOO_LOG_DIR"]
+
+EXPOSE 2181 2888 3888 8080
+
+ENV PATH=$PATH:/$DISTRO_NAME/bin \
+    ZOOCFGDIR=$ZOO_CONF_DIR
+
+COPY ./localcluster/config/docker-entrypoint.sh /
+COPY ./install /usr/local
+COPY ./localcluster/config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+ENTRYPOINT ["/usr/bin/supervisord"]

@@ -1,0 +1,4 @@
+#!/bin/bash -ex
+
+cd "/src"
+python3 -m unittest discover -s /src/ramcloud/localcluster/testing -v

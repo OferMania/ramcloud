@@ -1,0 +1,54 @@
+#!/bin/bash -eu
+# Build the primary RAMCloud binaries and libraries.
+
+# Command-line Defaults.
+DEBUG=no
+DEBUG_OPT=no
+
+# Parse command line.
+while [[ ${#} -gt 0 ]]; do
+  KEY="${1}"
+  case ${KEY} in
+    --help)
+      echo "Usage: ${0} [--debug] [--debug-opt]"
+      echo
+      echo "  --debug     -- Enable DEBUG=yes on the build. Required for unit tests."
+      echo "  --debug-opt -- Disable optimizations (-O0) on debug builds."
+      exit 0
+      ;;
+    --debug)
+      DEBUG=yes
+      shift 1
+      ;;
+    --debug-opt)
+      DEBUG_OPT=yes
+      shift 1
+      ;;
+    *)
+      echo "Unrecognized option: ${KEY}"
+      exit 1
+      ;;
+  esac
+done
+
+set -x
+cd /src/ramcloud
+
+# Build RAMCloud.
+rm -rf install
+make "-j$(nproc)" install DEBUG="${DEBUG}" DEBUG_OPT="${DEBUG_OPT}" GLIBCXX_USE_CXX11_ABI=yes EXTRACXXFLAGS='-Wno-error'
+
+# Rename the binaries to something a little more descriptive.
+mv install/bin/coordinator install/bin/rc-coordinator
+mv install/bin/client      install/bin/rc-client
+mv install/bin/server      install/bin/rc-server
+
+# Move the libraries to the correct place instead of in the ramcloud subdirectory.
+mv install/lib/ramcloud/* install/lib && rmdir install/lib/ramcloud
+
+# Build the proto files so we can read what RAMCloud puts in ZooKeeper.
+cd src
+PROTO_OUT=/src/ramcloud/bindings/python
+for proto_file in $(ls *.proto); do
+  python3 -m grpc_tools.protoc -I. --python_out=${PROTO_OUT} --grpc_python_out=${PROTO_OUT} ${proto_file}
+done

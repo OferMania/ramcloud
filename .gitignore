@@ -1,6 +1,7 @@
 .*.swp
 \#*#
 *.pyc
+*.py[od]
 *.o
 *.hi
 *.dump
@@ -34,3 +35,7 @@ tags
 # CMake
 CMakeLists.txt
 cmake-*/
+
+# Local Cluster
+__pycache__/
+tmp/
