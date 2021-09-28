@@ -30,6 +30,9 @@
 
 namespace RAMCloud {
 
+const uint32_t FailureDetector::PROBE_INTERVAL_MS = 100;
+const uint32_t FailureDetector::TIMEOUT_MS = 50;
+
 /**
  * Create a new FailureDetector object. Note that this class depends on the
  * AdminService running and keeping the global Context::serverList up
@@ -42,14 +45,20 @@ namespace RAMCloud {
  *      coordinator. Used only to avoid pinging ourself.
  */
 FailureDetector::FailureDetector(Context* context,
-                                 const ServerId ourServerId)
+                                 const ServerId ourServerId,
+                                 uint32_t probeMs,
+                                 uint32_t timeoutMs)
     : context(context),
       ourServerId(ourServerId),
+      probeUsec(probeMs * 1000),
+      timeoutUsec(timeoutMs * 1000),
       serverTracker(context),
       probesWithoutResponse(0),
       thread(),
       threadShouldExit(false)
 {
+    assert(timeoutUsec <= probeUsec);
+    LOG(WARNING, "FailureDetector initialized with probeUsec=%lu and timeoutUsec=%lu", probeUsec, timeoutUsec);
 }
 
 FailureDetector::~FailureDetector()
@@ -115,7 +124,7 @@ FailureDetector::detectorThreadEntry(FailureDetector* detector,
     nanosleep(&interval, NULL);
 
     interval.tv_sec = 0;
-    interval.tv_nsec = PROBE_INTERVAL_USECS*1000;
+    interval.tv_nsec = detector->probeUsec * 1000;
 
     while (1) {
         // Check if we have been requested to exit.
@@ -162,7 +171,7 @@ FailureDetector::pingRandomServer()
             locator.c_str());
         uint64_t start = Cycles::rdtsc();
         PingRpc rpc(context, pingee, ourServerId);
-        if (rpc.wait(TIMEOUT_USECS *1000)) {
+        if (rpc.wait(timeoutUsec * 1000)) {
             probesWithoutResponse = 0;
             LOG(DEBUG, "Ping succeeded to server %s (%s) in %.1f us",
                 pingee.toString().c_str(), locator.c_str(),

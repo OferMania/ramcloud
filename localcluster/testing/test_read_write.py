@@ -25,7 +25,7 @@ class TestReadWrite(unittest.TestCase):
     def test_do_reads_and_writes(self):
         value = x.rc_client.read(x.table, 'testKey')
         expect(value).equals(('testValue', 1))
-        for j in range(0, 10):
+        for j in range(0, 4):
             ts1 = time.time()
             for i in range(0, 4096):
                 x.rc_client.write(x.table, 'testKey_%d_FOOBARBAZDEADBEEF%d' % (j, i), 'testValue_%d_FOOBARBAZDEADBEEF%d' % (j, i))

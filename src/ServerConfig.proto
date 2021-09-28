@@ -59,6 +59,14 @@ message ServerConfig {
     /// Note that master and backup use up 12 and 13
     required fixed32 danger_threshold = 14;
 
+    /// Number of milliseconds between probes, when performing failure
+    /// detection.
+    required fixed32 failure_detector_probe = 15;
+
+    /// Number of milliseconds before a probe is considered to have timed out,
+    /// when performing failure detection.
+    required fixed32 failure_detector_timeout = 16;
+
     /// Configuration details specific to the MasterService on a server.
     message Master {
         /// Total number bytes to use for the in-memory Log.

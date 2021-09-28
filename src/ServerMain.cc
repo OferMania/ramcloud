@@ -20,6 +20,7 @@
 
 #include "Context.h"
 #include "CoordinatorSession.h"
+#include "FailureDetector.h"
 #if INFINIBAND
 #include "InfRcTransport.h"
 #endif
@@ -167,6 +168,16 @@ main(int argc, char *argv[])
              "the master has memory for 100 full segments and the expansion "
              "factor is 2.0, it will place up to 200 segments (each replicated "
              "R times) on backups.")
+            ("failureDetectorProbe",
+             ProgramOptions::value<uint32_t>(&config.failureDetectorProbe)->
+                default_value(FailureDetector::PROBE_INTERVAL_MS),
+             "Number of milliseconds between probes, when performing failure "
+             "detection.")
+            ("failureDetectorTimeout",
+             ProgramOptions::value<uint32_t>(&config.failureDetectorTimeout)->
+                default_value(FailureDetector::TIMEOUT_MS),
+             "Number of milliseconds before a probe is considered to have "
+             "timed out, when performing failure detection.")
             ("file,f",
              ProgramOptions::value<string>(&config.backup.file)->
                 default_value("/var/tmp/backup.log"),

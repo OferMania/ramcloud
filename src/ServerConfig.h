@@ -16,6 +16,7 @@
 #ifndef RAMCLOUD_SERVERCONFIG_H
 #define RAMCLOUD_SERVERCONFIG_H
 
+#include "FailureDetector.h"
 #include "Log.h"
 #include "Seglet.h"
 #include "Segment.h"
@@ -65,6 +66,8 @@ struct ServerConfig {
         , maxObjectKeySize((64 * 1024) - 1)
         , maxCores(2)
         , dangerThreshold(98)
+        , failureDetectorProbe(FailureDetector::PROBE_INTERVAL_MS)
+        , failureDetectorTimeout(FailureDetector::TIMEOUT_MS)
         , master(testing)
         , backup(testing)
     {}
@@ -90,6 +93,8 @@ struct ServerConfig {
         , maxObjectKeySize((64 * 1024) - 1)
         , maxCores(2)
         , dangerThreshold(98)
+        , failureDetectorProbe(FailureDetector::PROBE_INTERVAL_MS)
+        , failureDetectorTimeout(FailureDetector::TIMEOUT_MS)
         , master()
         , backup()
     {}
@@ -140,6 +145,8 @@ struct ServerConfig {
         config.set_max_object_key_size(maxObjectKeySize);
         config.set_max_cores(maxCores);
         config.set_danger_threshold(dangerThreshold);
+        config.set_failure_detector_probe(failureDetectorProbe);
+        config.set_failure_detector_timeout(failureDetectorTimeout);
 
         if (services.has(WireFormat::MASTER_SERVICE))
             master.serialize(*config.mutable_master());
@@ -225,6 +232,14 @@ struct ServerConfig {
      * due to possibly not having enough spare RAM to perform log cleaning.
      */
     uint32_t dangerThreshold;
+
+    /// Number of milliseconds between probes, when performing failure
+    /// detection.
+    uint32_t failureDetectorProbe;
+
+    /// Number of milliseconds before a probe is considered to have timed out,
+    /// when performing failure detection.
+    uint32_t failureDetectorTimeout;
 
     /**
      * Configuration details specific to the MasterService on a server,
