@@ -208,7 +208,11 @@ Server::enlist(ServerId replacingId)
         backup->setServerId(serverId);
 
     if (config.detectFailures) {
-        failureDetector.construct(context, serverId);
+        failureDetector.construct(
+            context,
+            serverId,
+            config.failureDetectorProbe,
+            config.failureDetectorTimeout);
         failureDetector->start();
     }
 }

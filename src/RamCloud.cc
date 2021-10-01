@@ -118,12 +118,18 @@ RamCloud::RamCloud(Context* context, const char* locator,
 
 RamCloud::~RamCloud()
 {
-    delete clientLeaseAgent;
-
-    delete rpcTracker;
-    delete realClientContext;
+    // We delete members in the REVERSE order of creation. This matters
+    // especially for transactionManager, since it cannot be gracefully
+    // deleted after rpcTracker if it contains ClientTransactionTask
+    // objects with rpc sessions
 
     delete transactionManager;
+
+    delete rpcTracker;
+
+    delete clientLeaseAgent;
+
+    delete realClientContext;
 }
 
 /**

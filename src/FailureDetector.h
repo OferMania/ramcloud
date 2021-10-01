@@ -43,33 +43,38 @@ namespace RAMCloud {
 class FailureDetector {
   public:
     FailureDetector(Context* context,
-                    ServerId ourServerId);
+                    const ServerId ourServerId,
+                    uint32_t probeMs,
+                    uint32_t timeoutMs);
     ~FailureDetector();
     void start();
     void halt();
 
-  PRIVATE:
-    /// Number of microseconds between probes.
-    static const int PROBE_INTERVAL_USECS = 100 * 1000;
+    /// Default number of milliseconds between probes.
+    static const uint32_t PROBE_INTERVAL_MS;
 
     /**
-     * Number of microseconds before a probe is considered to have timed out.
+     * Default number of milliseconds before a probe is considered to have timed out.
      * Some machines have be known to freeze for approximately 250ms, but this
      * threshold is intentionally smaller. We allow the coordinator to try again
      * with a longer timeout for those false-positives. If the coordinator ends
      * up becoming a bottleneck we may need to increase this timeout and move to
      * an asynchronous model.
      */
-    static const int TIMEOUT_USECS = 50 * 1000;
+    static const uint32_t TIMEOUT_MS;
 
-    static_assert(TIMEOUT_USECS <= PROBE_INTERVAL_USECS,
-                  "Timeout us should be less than probe interval.");
-
+  PRIVATE:
     /// Shared RAMCloud information.
     Context* context;
 
     /// Our ServerId (used to avoid pinging oneself).
     const ServerId       ourServerId;
+
+    /// Number of microseconds between probes.
+    uint32_t probeUsec;
+
+    /// Number of microseconds before a probe is considered to have timed out.
+    uint32_t timeoutUsec;
 
     /// ServerTracker used for obtaining random servers to ping. Nothing is
     /// currently stored with servers in the tracker.

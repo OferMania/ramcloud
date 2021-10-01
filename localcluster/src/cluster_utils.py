@@ -81,7 +81,7 @@ def get_host(locator):
     # locator should be in format 'k1=v1,k2=v2,....,kn=vn'
     args = [x for x in locator.split(',') if x.find('=') >= 0]
     arg_map = {k : v for (k,v) in [a.split('=', 2) for a in args]}
-    return arg_map['basic+udp:host']
+    return arg_map['tcp:host']
 
 def external_storage_string(ensemble):
     return ','.join(['{}:2181'.format(ip) for (_, ip) in list(ensemble.items())])
