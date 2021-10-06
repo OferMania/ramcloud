@@ -37,6 +37,17 @@
 namespace RAMCloud {
 
 /**
+ * Default RejectRules to use if none are provided by the caller: rejects
+ * nothing.
+ *
+ * TODO: version is set to 1 here, which doesn't impact the "reject-nothing"
+ * behavior due to all other reject-modifiers being off (aka zero), but it
+ * will be interesting to look into why using a version value of zero with
+ * all other reject modifiers are off upsets ObjectManager.cc
+ */
+static const RejectRules defaultRejectRules = {1, 0, 0, 0, 0};
+
+/**
  * Construct an ObjectManager.
  *
  * \param context
@@ -323,7 +334,7 @@ ObjectManager::prefetchHashTableBucket(SegmentIterator* it)
  */
 Status
 ObjectManager::readObject(Key& key, Buffer* outBuffer,
-                RejectRules* rejectRules, uint64_t* outVersion,
+                const RejectRules* rejectRules, uint64_t* outVersion,
                 bool valueOnly)
 {
     objectMap.prefetchBucket(key.getHash());
@@ -402,7 +413,7 @@ ObjectManager::readObject(Key& key, Buffer* outBuffer,
  *      different failures (tablet doesn't exist, reject rules applied, etc).
  */
 Status
-ObjectManager::removeObject(Key& key, RejectRules* rejectRules,
+ObjectManager::removeObject(Key& key, const RejectRules* rejectRules,
                 uint64_t* outVersion, Buffer* removedObjBuffer,
                 RpcResult* rpcResult, uint64_t* rpcResultPtr)
 {
@@ -429,7 +440,6 @@ ObjectManager::removeObject(Key& key, RejectRules* rejectRules,
     Log::Reference reference;
     if (!lookup(lock, key, type, buffer, NULL, &reference) ||
             type != LOG_ENTRY_TYPE_OBJ) {
-        static RejectRules defaultRejectRules;
         if (rejectRules == NULL)
             rejectRules = &defaultRejectRules;
         return rejectOperation(rejectRules, VERSION_NONEXISTENT);
@@ -1179,7 +1189,7 @@ ObjectManager::syncChanges()
  *      STATUS_UKNOWN_TABLE may be returned.
  */
 Status
-ObjectManager::writeObject(Object& newObject, RejectRules* rejectRules,
+ObjectManager::writeObject(Object& newObject, const RejectRules* rejectRules,
                 uint64_t* outVersion, Buffer* removedObjBuffer,
                 RpcResult* rpcResult, uint64_t* rpcResultPtr)
 {
@@ -1443,7 +1453,7 @@ ObjectManager::writeRpcResultOnly(RpcResult* rpcResult, uint64_t* rpcResultPtr)
  *      STATUS_UNKNOWN_TABLE may be returned.
  */
 Status
-ObjectManager::prepareOp(PreparedOp& newOp, RejectRules* rejectRules,
+ObjectManager::prepareOp(PreparedOp& newOp, const RejectRules* rejectRules,
                 uint64_t* newOpPtr, bool* isCommitVote,
                 RpcResult* rpcResult, uint64_t* rpcResultPtr)
 {
@@ -1612,7 +1622,7 @@ ObjectManager::prepareOp(PreparedOp& newOp, RejectRules* rejectRules,
  *      STATUS_UNKNOWN_TABLE may be returned.
  */
 Status
-ObjectManager::prepareReadOnly(PreparedOp& newOp, RejectRules* rejectRules,
+ObjectManager::prepareReadOnly(PreparedOp& newOp, const RejectRules* rejectRules,
                 bool* isCommitVote)
 {
     *isCommitVote = false;
@@ -1878,7 +1888,6 @@ ObjectManager::commitRemove(PreparedOp& op,
     Log::Reference reference;
     if (!lookup(lock, key, type, buffer, NULL, &reference) ||
             type != LOG_ENTRY_TYPE_OBJ) {
-        static RejectRules defaultRejectRules;
         return rejectOperation(&defaultRejectRules, VERSION_NONEXISTENT);
     }
 

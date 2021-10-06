@@ -75,9 +75,9 @@ class ObjectManager : public LogEntryHandlers,
                 uint32_t* numObjects);
     void prefetchHashTableBucket(SegmentIterator* it);
     Status readObject(Key& key, Buffer* outBuffer,
-                RejectRules* rejectRules, uint64_t* outVersion,
+                const RejectRules* rejectRules, uint64_t* outVersion,
                 bool valueOnly = false);
-    Status removeObject(Key& key, RejectRules* rejectRules,
+    Status removeObject(Key& key, const RejectRules* rejectRules,
                 uint64_t* outVersion, Buffer* removedObjBuffer = NULL,
                 RpcResult* rpcResult = NULL, uint64_t* rpcResultPtr = NULL);
     void removeOrphanedObjects();
@@ -85,16 +85,16 @@ class ObjectManager : public LogEntryHandlers,
                 std::unordered_map<uint64_t, uint64_t>* nextNodeIdMap);
     void replaySegment(SideLog* sideLog, SegmentIterator& it);
     void syncChanges();
-    Status writeObject(Object& newObject, RejectRules* rejectRules,
+    Status writeObject(Object& newObject, const RejectRules* rejectRules,
                 uint64_t* outVersion, Buffer* removedObjBuffer = NULL,
                 RpcResult* rpcResult = NULL, uint64_t* rpcResultPtr = NULL);
     bool keyPointsAtReference(Key& k, AbstractLog::Reference oldReference);
     void writePrepareFail(RpcResult* rpcResult, uint64_t* rpcResultPtr);
     void writeRpcResultOnly(RpcResult* rpcResult, uint64_t* rpcResultPtr);
-    Status prepareOp(PreparedOp& newOp, RejectRules* rejectRules,
+    Status prepareOp(PreparedOp& newOp, const RejectRules* rejectRules,
                 uint64_t* newOpPtr, bool* isCommitVote,
                 RpcResult* rpcResult, uint64_t* rpcResultPtr);
-    Status prepareReadOnly(PreparedOp& newOp, RejectRules* rejectRules,
+    Status prepareReadOnly(PreparedOp& newOp, const RejectRules* rejectRules,
                 bool* isCommitVote);
     Status tryGrabTxLock(Object& objToLock, Log::Reference& ref);
     Status writeTxDecisionRecord(TxDecisionRecord& record);

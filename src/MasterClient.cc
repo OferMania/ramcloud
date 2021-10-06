@@ -24,9 +24,6 @@
 
 namespace RAMCloud {
 
-// Default RejectRules to use if none are provided by the caller.
-RejectRules defaultRejectRules;
-
 /**
  * Instruct the master that it must no longer serve requests for the indexlet
  * specified. The server may reclaim all memory previously allocated to that
