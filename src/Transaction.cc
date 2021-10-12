@@ -142,6 +142,11 @@ Transaction::result()
     return (taskPtr->getDecision() == WireFormat::TxDecision::COMMIT);
 }
 
+WireFormat::TxDecision::Decision Transaction::getDecision()
+{
+    return taskPtr->getDecision();
+}
+
 /**
  * Read the current contents of an object as part of this transaction.
  *

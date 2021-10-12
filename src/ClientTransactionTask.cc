@@ -139,6 +139,9 @@ ClientTransactionTask::performTask()
                         TEST_LOG("Set decision to COMMIT.");
                         // NO break; fall through to continue with commit.
                         FALLS_THROUGH_TO
+                    case WireFormat::TxDecision::RETRY_LATER:
+                        // Take same actions as ABORT
+                        FALLS_THROUGH_TO
                     case WireFormat::TxDecision::ABORT:
                         // If not READ-ONLY, move to decision phase.
                         if (!readOnly) {
@@ -313,7 +316,8 @@ ClientTransactionTask::processPrepareRpcResults()
                 case TxPrepare::COMMITTED:
                     // Note the transaction has COMMITTED (as long as the
                     // transaction did not previously decided to abort).
-                    if (expect_true(decision != TxDecision::ABORT)) {
+                    if (expect_true(decision != TxDecision::ABORT &&
+                            decision != TxDecision::RETRY_LATER)) {
                         decision = TxDecision::COMMIT;
                     } else {
                         // Possible Byzantine failure detected; do not continue.
@@ -328,7 +332,8 @@ ClientTransactionTask::processPrepareRpcResults()
                     // Recovery was triggered before this commit process
                     // completed which means we should ABORT.  Split into its
                     // own case to detect ABORTs due to recovery timeouts.
-                    if (decision != TxDecision::ABORT) {
+                    if (decision != TxDecision::ABORT &&
+                            decision != TxDecision::RETRY_LATER) {
                         double detectionTime =
                                 Cycles::toSeconds(Cycles::rdtsc() - startTime);
                         RAMCLOUD_LOG(WARNING, "Transaction %lu.%lu consisting "
@@ -341,14 +346,35 @@ ClientTransactionTask::processPrepareRpcResults()
                     FALLS_THROUGH_TO
                 case TxPrepare::ABORT:
                     // Decide the transaction should ABORT (as long as the
-                    // transaction has not already committed).
-                    if (expect_true(decision != TxDecision::COMMIT)) {
+                    // transaction has not already committed, or a RETRY_LATER
+                    // was not indicated, hinting that we can retry later).
+                    if (decision != TxDecision::RETRY_LATER &&
+                            expect_true(decision != TxDecision::COMMIT)) {
                         decision = TxDecision::ABORT;
                     } else {
                         // Possible Byzantine failure detected; do not continue.
                         RAMCLOUD_LOG(ERROR,
                                 "Transaction %lu.%lu detected TxPrepare trying "
                                 "to ABORT after COMMITTED.",
+                                lease.leaseId, txId);
+                        ClientException::throwException(HERE,
+                                                        STATUS_INTERNAL_ERROR);
+                    }
+                    break;
+                case TxPrepare::RETRY_LATER:
+                    // Decide the transaction should RETRY_LATER (as long as the
+                    // transaction has not already committed). Note that if one
+                    // rpc yields ABORT & another yields RETRY_LATER, it means
+                    // the transaction should be aborted, but we ran into a hint
+                    // somewhere that the same request could be retried later,
+                    // and therefore, the decision should be RETRY_LATER.
+                    if (expect_true(decision != TxDecision::COMMIT)) {
+                        decision = TxDecision::RETRY_LATER;
+                    } else {
+                        // Possible Byzantine failure detected; do not continue.
+                        RAMCLOUD_LOG(ERROR,
+                                "Transaction %lu.%lu detected TxPrepare trying "
+                                "to RETRY_LATER after COMMITTED.",
                                 lease.leaseId, txId);
                         ClientException::throwException(HERE,
                                                         STATUS_INTERNAL_ERROR);

@@ -1370,14 +1370,20 @@ ObjectManager::writeObject(Object& newObject, const RejectRules* rejectRules,
  *      linearizability.
  * \param[out] rpcResultPtr
  *      The pointer to the RpcResult in log is returned.
+ * \param[in] vote
+ *      The vote corresponding to the transaction preparation problem. Default
+ *      is ABORT.
  */
 void
-ObjectManager::writePrepareFail(RpcResult* rpcResult, uint64_t* rpcResultPtr)
+ObjectManager::writePrepareFail(
+    RpcResult* rpcResult,
+    uint64_t* rpcResultPtr,
+    WireFormat::TxPrepare::Vote vote)
 {
     Log::AppendVector av;
     *(reinterpret_cast<WireFormat::TxPrepare::Vote*>(
             const_cast<void*>(rpcResult->getResp()))) =
-                    WireFormat::TxPrepare::ABORT;
+                    vote;
     rpcResult->assembleForLog(av.buffer);
     av.type = LOG_ENTRY_TYPE_RPCRESULT;
 
@@ -1491,13 +1497,13 @@ ObjectManager::prepareOp(PreparedOp& newOp, const RejectRules* rejectRules,
     if (tablet.state != TabletManager::NORMAL)
         return STATUS_UNKNOWN_TABLET;
 
-    // If the key is already locked, abort.
+    // If the key is already locked, abort with retry hint.
     if (lockTable.isLockAcquired(key)) {
         RAMCLOUD_LOG(DEBUG,
                 "TxPrepare fail. Key: %.*s, object is already locked",
                 keyLength, reinterpret_cast<const char*>(keyString));
-        writePrepareFail(rpcResult, rpcResultPtr);
-        return STATUS_OK;
+        writePrepareFail(rpcResult, rpcResultPtr, WireFormat::TxPrepare::RETRY_LATER);
+        return STATUS_RETRY;
     }
 
     LogEntryType currentType = LOG_ENTRY_TYPE_INVALID;
@@ -1659,12 +1665,12 @@ ObjectManager::prepareReadOnly(PreparedOp& newOp, const RejectRules* rejectRules
     if (tablet.state != TabletManager::NORMAL)
         return STATUS_UNKNOWN_TABLET;
 
-    // If the key is already locked, abort.
+    // If the key is already locked, abort with retry hint.
     if (lockTable.isLockAcquired(key)) {
         RAMCLOUD_LOG(DEBUG,
                 "TxPrepare(readOnly) fail. Key: %.*s, object is already locked",
                 keyLength, reinterpret_cast<const char*>(keyString));
-        return STATUS_OK;
+        return STATUS_RETRY;
     }
 
     LogEntryType currentType = LOG_ENTRY_TYPE_INVALID;
