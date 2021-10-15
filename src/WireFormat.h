@@ -1698,6 +1698,9 @@ struct TxDecision {
                     ABORT,          // Indicate that transaction should abort.
                     RECOVERED,      // Indicate that transaction recovery thinks
                                     // the transaction has committed or aborted.
+                    RETRY_LATER,    // Indicate that transaction ran into a hint
+                                    // that it might be retryable later, but for
+                                    // right now, it should be aborted.
                     UNDECIDED };    // Intermediate state; should never be sent.
 
     struct Request {
@@ -1742,10 +1745,14 @@ struct TxPrepare {
                                     // unilaterally decide to commit.
                 ABORT,              // DO NOT commit; conflict or other error
                                     // detected; should abort the transaction.
-                ABORT_REQUESTED };  // DO NOT commit; recovery timeout occurred
+                ABORT_REQUESTED,    // DO NOT commit; recovery timeout occurred
                                     // and recovery is underway (a special case
                                     // of ABORT which allows us to detect when
                                     // the commit process is too slow).
+                RETRY_LATER };      // DO NOT commit; we found a hint that the
+                                    // same transaction request might be
+                                    // retryable later, but for now, we should
+                                    // abort the transaction
 
     struct Request {
         RequestCommon common;

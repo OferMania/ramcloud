@@ -302,7 +302,8 @@ TxRecoveryManager::RecoveryTask::performTask()
         {
             // Done with the request abort phase.
             // Build decision record to be logged.
-            if (decision != WireFormat::TxDecision::ABORT) {
+            if ((decision != WireFormat::TxDecision::ABORT) &&
+                    (decision != WireFormat::TxDecision::RETRY_LATER)) {
                 decision = WireFormat::TxDecision::COMMIT;
             }
 
@@ -704,6 +705,8 @@ TxRecoveryManager::RecoveryTask::processRequestAbortRpcResults()
             if (vote == WireFormat::TxPrepare::ABORT_REQUESTED ||
                     vote == WireFormat::TxPrepare::ABORT) {
                 decision = WireFormat::TxDecision::ABORT;
+            } else if (vote == WireFormat::TxPrepare::RETRY_LATER) {
+                decision = WireFormat::TxDecision::RETRY_LATER;
             }
         } catch (UnknownTabletException& e) {
             // Target server did not contain the requested tablet; the
@@ -794,6 +797,9 @@ TxRecoveryManager::RecoveryTask::toString()
             break;
         case WireFormat::TxDecision::ABORT:
             s.append(" decision{ABORT}");
+            break;
+        case WireFormat::TxDecision::RETRY_LATER:
+            s.append(" decision{RETRY_LATER}");
             break;
         case WireFormat::TxDecision::RECOVERED:
             s.append(" decision{RECOVERED}");

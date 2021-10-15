@@ -89,7 +89,8 @@ class ObjectManager : public LogEntryHandlers,
                 uint64_t* outVersion, Buffer* removedObjBuffer = NULL,
                 RpcResult* rpcResult = NULL, uint64_t* rpcResultPtr = NULL);
     bool keyPointsAtReference(Key& k, AbstractLog::Reference oldReference);
-    void writePrepareFail(RpcResult* rpcResult, uint64_t* rpcResultPtr);
+    void writePrepareFail(RpcResult* rpcResult, uint64_t* rpcResultPtr,
+                WireFormat::TxPrepare::Vote vote = WireFormat::TxPrepare::ABORT);
     void writeRpcResultOnly(RpcResult* rpcResult, uint64_t* rpcResultPtr);
     Status prepareOp(PreparedOp& newOp, const RejectRules* rejectRules,
                 uint64_t* newOpPtr, bool* isCommitVote,

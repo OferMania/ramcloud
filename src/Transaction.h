@@ -23,6 +23,7 @@
 #include "Common.h"
 #include "MultiRead.h"
 #include "RamCloud.h"
+#include "WireFormat.h"
 
 namespace RAMCloud {
 
@@ -74,6 +75,10 @@ class Transaction {
     bool commitReady();
     bool syncReady();
     bool result();
+
+    // When result() is false, this gives us some insight into why the transaction failed
+    WireFormat::TxDecision::Decision getDecision();
+
     void poll();
 
     void read(uint64_t tableId, const void* key, uint16_t keyLength,

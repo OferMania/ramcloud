@@ -2616,7 +2616,8 @@ MasterService::txDecision(const WireFormat::TxDecision::Request* reqHdr,
                 return;
             }
         }
-    } else if (reqHdr->decision == WireFormat::TxDecision::ABORT) {
+    } else if ((reqHdr->decision == WireFormat::TxDecision::ABORT) ||
+               (reqHdr->decision == WireFormat::TxDecision::RETRY_LATER)) {
         for (uint32_t i = 0; i < participantCount; ++i) {
             TabletManager::Tablet tablet;
             if (!tabletManager.getTablet(participants[i].tableId,
@@ -2767,7 +2768,8 @@ MasterService::txRequestAbort(
             if (respHdr->vote == TxPrepare::PREPARED) {
                 continue;
             } else if (respHdr->vote == TxPrepare::ABORT ||
-                    respHdr->vote == TxPrepare::ABORT_REQUESTED) {
+                    respHdr->vote == TxPrepare::ABORT_REQUESTED ||
+                    respHdr->vote == TxPrepare::RETRY_LATER) {
                 break;
             } else {
                 assert(false);
@@ -3028,7 +3030,11 @@ MasterService::txPrepare(const WireFormat::TxPrepare::Request* reqHdr,
             respHdr->common.status = objectManager.prepareReadOnly(
                     *op, &rejectRules, &isCommitVote);
             if (!isCommitVote || respHdr->common.status != STATUS_OK) {
-                respHdr->vote = WireFormat::TxPrepare::ABORT;
+                if (respHdr->common.status == STATUS_RETRY) {
+                    respHdr->vote = WireFormat::TxPrepare::RETRY_LATER;
+                } else {
+                    respHdr->vote = WireFormat::TxPrepare::ABORT;
+                }
                 break;
             }
             respHdr->vote = WireFormat::TxPrepare::PREPARED;
@@ -3048,7 +3054,8 @@ MasterService::txPrepare(const WireFormat::TxPrepare::Request* reqHdr,
             if (respHdr->vote == WireFormat::TxPrepare::PREPARED) {
                 continue;
             } else if (respHdr->vote == WireFormat::TxPrepare::ABORT ||
-                    respHdr->vote == WireFormat::TxPrepare::ABORT_REQUESTED) {
+                    respHdr->vote == WireFormat::TxPrepare::ABORT_REQUESTED ||
+                    respHdr->vote == WireFormat::TxPrepare::RETRY_LATER) {
                 break;
             } else {
                 assert(false);
@@ -3078,7 +3085,11 @@ MasterService::txPrepare(const WireFormat::TxPrepare::Request* reqHdr,
         }
 
         if (!isCommitVote || respHdr->common.status != STATUS_OK) {
-            respHdr->vote = WireFormat::TxPrepare::ABORT;
+            if (respHdr->common.status == STATUS_RETRY) {
+                respHdr->vote = WireFormat::TxPrepare::RETRY_LATER;
+            } else {
+                respHdr->vote = WireFormat::TxPrepare::ABORT;
+            }
             rh->recordCompletion(rpcResultPtr);
             break;
         }
