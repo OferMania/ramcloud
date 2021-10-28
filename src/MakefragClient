@@ -129,6 +129,7 @@ CLIENT_SRCFILES := \
 		   $(OBJDIR)/ServerList.pb.cc \
 		   $(OBJDIR)/ServerStatistics.pb.cc \
 		   $(OBJDIR)/SpinLockStatistics.pb.cc \
+		   $(OBJDIR)/Table.pb.cc \
 		   $(OBJDIR)/Tablets.pb.cc \
 		   $(OBJDIR)/Indexlet.pb.cc \
 		   $(OBJDIR)/RecoveryPartition.pb.cc \

@@ -437,6 +437,7 @@ INSTALL_INCLUDES := \
     src/CoordinatorRpcWrapper.h \
     src/Crc32C.h \
     src/Exception.h \
+    src/ExternalStorage.h \
     src/Fence.h \
     src/Key.h \
     src/IndexRpcWrapper.h \
@@ -484,6 +485,7 @@ INSTALL_INCLUDES := \
     $(OBJDIR)/ServerList.pb.h \
     $(OBJDIR)/ServerStatistics.pb.h \
     $(OBJDIR)/SpinLockStatistics.pb.h \
+    $(OBJDIR)/Table.pb.h \
     $(OBJDIR)/TableConfig.pb.h \
     $(OBJDIR)/Tablets.pb.h \
     $(NULL)
