@@ -2,27 +2,109 @@
 # Build the primary RAMCloud binaries and libraries.
 
 # Command-line Defaults.
-DEBUG=no
-DEBUG_OPT=no
+declare BUILD_TYPE="relwithdebinfo"
+declare ARCH="native"
+declare USE_DPDK="no"
+declare EXTRA_LIBS=""
+declare NPROC_INC=0
 
 # Parse command line.
 while [[ ${#} -gt 0 ]]; do
   KEY="${1}"
   case ${KEY} in
     --help)
-      echo "Usage: ${0} [--debug] [--debug-opt]"
+      echo "Usage: ${0} [OPTION]..."
       echo
-      echo "  --debug     -- Enable DEBUG=yes on the build. Required for unit tests."
-      echo "  --debug-opt -- Disable optimizations (-O0) on debug builds."
+      echo "Options:"
+      echo
+      echo "  --build-type={BUILD_TYPE} -- BUILD_TYPE denote the manner in which RAMCloud is built. It can be"
+      echo "                               one of: relwithdebinfo, release, debug, debrcunit"
+      echo "                               The default is relwithdebinfo."
+      echo
+      echo "                               relwithdebinfo is effectively release mode (-O3 -NDEBUG) with debug"
+      echo "                               symbols turned on (-g). It is suitable for running on production"
+      echo "                               while still utilizing a debugger tool like gdb."
+      echo
+      echo "                               release is release mode (-O3 -NDEBUG) without debuging symbols (-s)"
+      echo "                               and includes some additional optimizations. This is the option you"
+      echo "                               if you want to run RAMCloud in the fastest way possible for"
+      echo "                               production-quality builds and you do not care about it being"
+      echo "                               incompatible with debugger tools!"
+      echo
+      echo "                               debug is debug mode optimized for debugging tools like gdb (-g -Og)."
+      echo "                               If you are debugging unit or integration tests for a non-RAMCloud"
+      echo "                               program that utilizes RAMCloud, possibly within a dev-env, then this"
+      echo "                               is likely the option you want!"
+      echo
+      echo "                               debrcunit is same as debug (-g -Og), but optimized for running"
+      echo "                               RAMCloud's own unit tests (-DTESTING=1). IMPORANT: This option is"
+      echo "                               only meant for RAMCloud unit tests, and runs too slowly for other"
+      echo "                               scenarios, where you may wish to instead consider using build-type"
+      echo "                               of debug."
+      echo
+      echo "  --arch={ARCH} -- Denotes which architecture to optimize the build for, default is native, and"
+      echo "                   this is a reasonable choice when the build-type is debug or relwithdebinfo."
+      echo
+      echo "  --dpdk={USE_DPDK} -- USE_DPDK can be yes or no. This denotes if we are building RAMCloud with"
+      echo "                       intention of its internal cluster transport of communication using DPDK."
+      echo "                       Default is no."
+      echo
+      echo "  --nproc-inc={NPROC_INC} -- RAMCloud builds by default using nproc amount of processing units,"
+      echo "                             ie, NPROC_INC is 0 by default. RAMCloud will build using a number"
+      echo "                             of processing units equal to nproc+{NPROC_INC}. NPROC_INC can be"
+      echo "                             negative. It just means building with fewer than nproc amount of"
+      echo "                             processing units. This has NOTHING to do with the amount of"
+      echo "                             processing units used to run RAMCloud after it is built. It is not"
+      echo "                             recommended to change NPROC_INC unless you know what you're doing."
+      echo
+      echo "  --extra-libs={EXTRA_LIBS} -- EXTRA_LIBS is typically represented as a string enclosed in"
+      echo "                               double-quotes. This is a list of space-separated additional"
+      echo "                               libraries to build RAMCloud with, and each item typically starts"
+      echo "                               with -l. An example of EXTRA_LIBS is \"-lmnl -lpcap\". The default"
+      echo "                               for EXTRA_LIBS is empty-string, meaning no additional libraries in"
+      echo "                               building RAMCloud, beyond those this script decides to use."
+      echo
       exit 0
       ;;
-    --debug)
-      DEBUG=yes
-      shift 1
+    --arch)
+      ARCH=$2
+      shift 2
       ;;
-    --debug-opt)
-      DEBUG_OPT=yes
-      shift 1
+    --arch=*)
+      ARCH=${KEY#*=}
+      shift
+      ;;
+    --build-type)
+      BUILD_TYPE=$2
+      shift 2
+      ;;
+    --build-type=*)
+      BUILD_TYPE=${KEY#*=}
+      shift
+      ;;
+    --dpdk)
+      USE_DPDK=$2
+      shift 2
+      ;;
+    --dpdk=*)
+      USE_DPDK=${KEY#*=}
+      shift
+      ;;
+    --extra-libs)
+      EXTRA_LIBS=$2
+      shift 2
+      ;;
+    --extra-libs=*)
+      EXTRA_LIBS=${KEY#*=}
+      shift
+      ;;
+    --nproc-inc)
+      NPROC_INC=$2
+      shift 2
+      ;;
+    --nproc-inc=*)
+      NPROC_INC=${KEY#*=}
+      shift
       ;;
     *)
       echo "Unrecognized option: ${KEY}"
@@ -36,7 +118,7 @@ cd /src/ramcloud
 
 # Build RAMCloud.
 rm -rf install
-make "-j$(nproc)" install DEBUG="${DEBUG}" DEBUG_OPT="${DEBUG_OPT}" GLIBCXX_USE_CXX11_ABI=yes EXTRACXXFLAGS='-Wno-error'
+make --jobs=$(($(nproc) + ${NPROC_INC})) install BUILD_TYPE="${BUILD_TYPE}" GLIBCXX_USE_CXX11_ABI=yes EXTRACXXFLAGS='-Wno-error' DPDK="${USE_DPDK}" ARCH="${ARCH}" EXTRALIBS="${EXTRA_LIBS}"
 
 # Rename the binaries to something a little more descriptive.
 mv install/bin/coordinator install/bin/rc-coordinator
