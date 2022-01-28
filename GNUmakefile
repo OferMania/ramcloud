@@ -9,8 +9,7 @@
 # variables in the file private/MakefragPrivateTop.
 include $(wildcard private/MakefragPrivateTop)
 
-DEBUG ?= yes
-DEBUG_OPT ?= no
+BUILD_TYPE ?= relwithdebinfo
 YIELD ?= no
 SSE ?= sse4.2
 ARCH ?= native
@@ -52,20 +51,32 @@ ZOOKEEPER_LIB :=
 ZOOKEEPER_DIR :=
 endif
 
+ifeq ($(BUILD_TYPE),debug)
 BASECFLAGS := -g
-ifeq ($(DEBUG),yes)
-ifeq ($(DEBUG_OPT),yes)
-OPTFLAG := -O0
-endif
-DEBUGFLAGS := -DTESTING=1 -fno-builtin
-else
+OPTFLAG := -Og
+TESTFLAGS := -DTESTING=0
+DEBUGFLAGS := -fno-builtin
+else ifeq ($(BUILD_TYPE),debrcunit)
+BASECFLAGS := -g
+OPTFLAG := -Og
+TESTFLAGS := -DTESTING=1
+DEBUGFLAGS := -fno-builtin
+else ifeq ($(BUILD_TYPE),release)
+BASECFLAGS := -s
 OPTFLAG := -O3
 DEBUGFLAGS := -DNDEBUG
+RELEASEFLAGS := -flto -ffat-lto-objects
+else ifeq ($(BUILD_TYPE),relwithdebinfo)
+BASECFLAGS := -g
+OPTFLAG := -O3
+DEBUGFLAGS := -DNDEBUG
+else
+$(error unrecognized BUILD_TYPE of $(BUILD_TYPE))
 endif
 
 COMFLAGS := $(BASECFLAGS) $(OPTFLAG) -fno-strict-aliasing \
 	        -MD -m$(SSE) \
-	        $(DEBUGFLAGS)
+	        $(TESTFLAGS) $(DEBUGFLAGS) $(RELEASEFLAGS)
 ifeq ($(COMPILER),gnu)
 COMFLAGS += -march=$(ARCH)
 endif
