@@ -69,20 +69,6 @@ class RpcLevel {
                     "scripts/genLevels.py or inspect status of current host connection",
                     WireFormat::opcodeSymbol(currentOpcode),
                     WireFormat::opcodeSymbol(opcode));
-            ++upLevelCount;
-            if (upLevelCount >= maxUpLevel) {
-                RAMCLOUD_LOG(ERROR, "Reached %lu consecutive unexpected "
-                        "nondecreasing levels in RPC calls per previous "
-                        "log(s), aborting",
-                        maxUpLevel);
-                std::abort();
-            }
-        } else {
-            // We expected to reach here a lot. It means all is fine.
-            // Sometimes we have consecutive unresolved pings, but as
-            // long as they get resolved in a timely manner, it's not
-            // problematic.
-            upLevelCount = 0;
         }
     }
 
@@ -133,15 +119,6 @@ class RpcLevel {
     // Thread-local variable that holds the most recent value passed to
     // setCurrentOpcode.
     static __thread WireFormat::Opcode currentOpcode;
-
-    // Count how many consecutive times on a single thread we are performing
-    // a subsequent RPC of level equivalent or higher. Reaching maxUpLevel
-    // implies either a connection or genLevels.py problem.
-    static __thread uint64_t upLevelCount;
-
-    // The maximum subsequent RPC calls of level equivalent or higher that
-    // can be tolerated before we conclude a system-wide problem and abort.
-    static const uint64_t maxUpLevel;
 
     // Defines the level associated with each RPC opcode.
     static uint8_t levels[];

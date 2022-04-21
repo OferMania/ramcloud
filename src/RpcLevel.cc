@@ -19,8 +19,6 @@
 namespace RAMCloud {
 
 __thread WireFormat::Opcode RpcLevel::currentOpcode;
-__thread uint64_t RpcLevel::upLevelCount = 0;
-const uint64_t RpcLevel::maxUpLevel = 1000;
 int RpcLevel::savedMaxLevel = -1;
 
 // The contents of the following variable are generated automatically by
