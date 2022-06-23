@@ -60,13 +60,29 @@ uint64_t
 RpcTracker::newRpcId(TrackedRpc* ptr)
 {
     assert(ptr != NULL);
+    uint32_t finishFailures = 0;
     while (firstMissing + windowSize <= nextRpcId) {
         RAMCLOUD_CLOG(NOTICE, "Waiting for response of RPC with id: %ld",
                       firstMissing);
         TrackedRpc* oldest = oldestOutstandingRpc();
-        oldest->tryFinish();
+        bool finished = oldest->tryFinish();
+        if (!finished) {
+            ++finishFailures;
+            if (finishFailures >= MAX_TRY_FINISH_FAILURES) {
+                // This should NOT happen, but we give up and assign the intended nextRpcId if it does
+                RAMCLOUD_LOG(WARNING, "Encountered %d failures on oldest RPC to try and finish",
+                             MAX_TRY_FINISH_FAILURES);
+                break;
+            }
+        }
     }
-    assert(firstMissing + windowSize > nextRpcId);
+    if (firstMissing + windowSize <= nextRpcId) {
+        // This should NOT happen, but we press onwards and assign the intended nextRpcId anyhow.
+        // Because this code is in rc-client, we try to avoid crashing the external application
+        // if it's just a matter of an RPC taking too long and needing more time.
+        RAMCLOUD_LOG(WARNING, "firstMissing(%ld) + windowSize(%d) <= nextRpcId(%ld)",
+                     firstMissing, windowSize, nextRpcId);
+    }
     rpcs[nextRpcId & indexMask] = ptr;
     return nextRpcId++;
 }
@@ -94,13 +110,29 @@ uint64_t
 RpcTracker::newRpcIdBlock(TrackedRpc* ptr, size_t size)
 {
     assert(ptr != NULL);
+    uint32_t finishFailures = 0;
     while (firstMissing + windowSize <= nextRpcId) {
         RAMCLOUD_CLOG(NOTICE, "Waiting for response of RPC with id: %ld",
                       firstMissing);
         TrackedRpc* oldest = oldestOutstandingRpc();
-        oldest->tryFinish();
+        bool finished = oldest->tryFinish();
+        if (!finished) {
+            ++finishFailures;
+            if (finishFailures >= MAX_TRY_FINISH_FAILURES) {
+                // This should NOT happen, but we give up and assign the intended nextRpcId if it does
+                RAMCLOUD_LOG(WARNING, "Encountered %d failures on oldest RPC to try and finish",
+                             MAX_TRY_FINISH_FAILURES);
+                break;
+            }
+        }
     }
-    assert(firstMissing + windowSize > nextRpcId);
+    if (firstMissing + windowSize <= nextRpcId) {
+        // This should NOT happen, but we press onwards and assign the intended nextRpcId anyhow.
+        // Because this code is in rc-client, we try to avoid crashing the external application
+        // if it's just a matter of an RPC taking too long and needing more time.
+        RAMCLOUD_LOG(WARNING, "firstMissing(%ld) + windowSize(%d) <= nextRpcId(%ld)",
+                     firstMissing, windowSize, nextRpcId);
+    }
     rpcs[nextRpcId & indexMask] = ptr;
     uint64_t blockRpcId = nextRpcId;
     nextRpcId += size;

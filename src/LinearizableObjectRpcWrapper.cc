@@ -197,11 +197,11 @@ LinearizableObjectRpcWrapper::waitInternal(Dispatch* dispatch,
     }
 
 // See RpcTracker::TrackedRpc for documentation.
-void LinearizableObjectRpcWrapper::tryFinish()
+bool LinearizableObjectRpcWrapper::tryFinish()
 {
     RAMCLOUD_TEST_LOG("called");
     // In this case we might as well wait.
-    waitInternal(ramcloud->clientContext->dispatch);
+    return waitInternal(ramcloud->clientContext->dispatch);
 }
 
 /*

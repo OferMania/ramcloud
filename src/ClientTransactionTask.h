@@ -100,6 +100,12 @@ class ClientTransactionTask : public RpcTracker::TrackedRpc {
     bool readOnly;
 
   PRIVATE:
+    // We set this to double the amount of MAX_OBJECTS_PER_RPC (aka the largest batch size of
+    // multi-reads, as defined in MultiOp.h). No transaction should EVER need to exceed this
+    // amount of performTask() invocations in order to finish with a conclusion. This variable
+    // is meant to guard against a single invocation of tryFinish() taking too long.
+    static const uint32_t MAX_TASKS_PER_TRY_FINISH = 40;
+
     /// Number of participant objects/operations.
     uint32_t participantCount;
     /// Expandable raw storage for the List of participant object identifiers.
@@ -167,7 +173,7 @@ class ClientTransactionTask : public RpcTracker::TrackedRpc {
     void processPrepareRpcResults();
     void sendDecisionRpc();
     void sendPrepareRpc();
-    virtual void tryFinish();
+    virtual bool tryFinish();
 
     /// Encapsulates common state and methods of Decision and Prepare RPCs.
     class ClientTransactionRpcWrapper : public RpcWrapper {

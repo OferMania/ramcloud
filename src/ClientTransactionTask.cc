@@ -507,13 +507,33 @@ ClientTransactionTask::sendPrepareRpc()
 }
 
 // See RpcTracker::TrackedRpc for documentation.
-void ClientTransactionTask::tryFinish()
+bool ClientTransactionTask::tryFinish()
 {
-    // Making forward progress requires the follow:
-    //  (1) Calling performTask (by calling poll on the manager)
-    //  (2) Allowing the transport to run by calling poll
-    ramcloud->transactionManager->poll();
-    ramcloud->poll();
+    // When state is INIT, invoking performTask() from RpcTracker creates an infinite recursion. We
+    // guard against that here by not allowing the RPC task to advance
+    if (state == INIT) {
+        RAMCLOUD_LOG(WARNING, "Attempted tryFinish() when state is INIT");
+        return false;
+    }
+
+    // Making forward progress requires the following:
+    //  (1) Calling performTask (equivalent of calling poll() on the manager, except JUST for this task)
+    //  (2) Checking if we're either in state DONE or DECISION with all pieces sent (ie the
+    //         allDecisionsSent() check)
+    //
+    // Because this method is a "try" Finish, we cap the number of invocations of performTask()
+    uint32_t taskCount = 0;
+    while (!allDecisionsSent() && taskCount < MAX_TASKS_PER_TRY_FINISH) {
+        performTask();
+        ++taskCount;
+    }
+
+    if (!allDecisionsSent()) {
+        RAMCLOUD_LOG(WARNING, "Exceeded %d invocations of performTask()", MAX_TASKS_PER_TRY_FINISH);
+        return false;
+    }
+
+    return true;
 }
 
 /**
