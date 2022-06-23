@@ -28,12 +28,12 @@ class TestElectedCoordinator(unittest.TestCase):
         zk_client = cu.get_zookeeper_client(x.ensemble)
         locator =  zk_client.get('/ramcloud/main/coordinator')[0].decode()
         host = cu.get_host(locator)
-        x.node_containers[host].exec_run('killall -SIGKILL rc-coordinator')
+        x.node_containers[host].exec_run('pkill -SIGKILL rc-coordinator')
 
         # after the coordinator is down, we try to read. We expect
         # to see our value.
         value = x.rc_client.read(x.table, 'testKey')
-        time.sleep(3)  # 3 seconds is needed for a new coordinator to be elected & results to show in zk
+        time.sleep(6)  # time needed for a new coordinator to be elected & results to show in zk
         new_locator =  zk_client.get('/ramcloud/main/coordinator')[0].decode()
 
         expect(value).equals(('testValue', 1))

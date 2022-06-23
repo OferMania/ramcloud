@@ -29,7 +29,7 @@ class TestBackupServer(unittest.TestCase):
         # find the host corresponding to the backup data, and kill that
         backup_id = x.getPlusOneBackupId(server_id)
         host = x.server_id_to_host[backup_id]
-        x.node_containers[host].exec_run('killall -SIGKILL rc-server')
+        x.node_containers[host].exec_run('pkill -SIGKILL rc-server')
 
         # read the value again (without waiting for backup to recover).
         # We expect the same value.
@@ -45,7 +45,7 @@ class TestBackupServer(unittest.TestCase):
         # find the host corresponding to the backup data, and kill that
         backup_id = x.getPlusOneBackupId(server_id)
         host = x.server_id_to_host[backup_id]
-        x.node_containers[host].exec_run('killall -SIGKILL rc-server')
+        x.node_containers[host].exec_run('pkill -SIGKILL rc-server')
 
         # after the backup goes down, we try to write (not read). We expect
         # the read that follows to correctly contain our value.
@@ -62,7 +62,7 @@ class TestBackupServer(unittest.TestCase):
         # find the host corresponding to the backup data, and kill that
         backup_id = x.getPlusOneBackupId(server_id)
         host = x.server_id_to_host[backup_id]
-        x.node_containers[host].exec_run('killall -SIGKILL rc-server')
+        x.node_containers[host].exec_run('pkill -SIGKILL rc-server')
 
         # read the value again (without waiting for backup to recover).
         # We expect the same value.
@@ -74,7 +74,7 @@ class TestBackupServer(unittest.TestCase):
         # forever.
         time.sleep(3)
         host = x.server_id_to_host[server_id]
-        x.node_containers[host].exec_run('killall -SIGKILL rc-server')
+        x.node_containers[host].exec_run('pkill -SIGKILL rc-server')
 
         # read the value again. We expect the same value.
         value = x.rc_client.read(x.table, 'testKey')
@@ -89,7 +89,7 @@ class TestBackupServer(unittest.TestCase):
         # find the host corresponding to the backup data, and kill that
         backup_id = x.getPlusOneBackupId(server_id)
         host = x.server_id_to_host[backup_id]
-        x.node_containers[host].exec_run('killall -SIGKILL rc-server')
+        x.node_containers[host].exec_run('pkill -SIGKILL rc-server')
 
         # write a new value without waiting for backup to recover.
         x.rc_client.write(x.table, 'testKey', 'testValue2')
@@ -99,7 +99,7 @@ class TestBackupServer(unittest.TestCase):
         # forever.
         time.sleep(3)
         host = x.server_id_to_host[server_id]
-        x.node_containers[host].exec_run('killall -SIGKILL rc-server')
+        x.node_containers[host].exec_run('pkill -SIGKILL rc-server')
 
         # read the value again. We expect the new value.
         value = x.rc_client.read(x.table, 'testKey')

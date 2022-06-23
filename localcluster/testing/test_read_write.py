@@ -21,7 +21,8 @@ class TestReadWrite(unittest.TestCase):
         x.outputLogs()
         x.tearDown()
 
-    @timeout(ten_minutes)
+    # 15 minute timeout
+    @timeout(900)
     def test_do_reads_and_writes(self):
         value = x.rc_client.read(x.table, 'testKey')
         expect(value).equals(('testValue', 1))

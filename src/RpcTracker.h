@@ -51,8 +51,14 @@ class RpcTracker {
          * Though the rpc does not have to finish before this call returns, each
          * call of this method should make progress and eventually cause
          * rpcFinished() to be called.
+         *
+         * Returns true if the tryFinish() invocation caused rpcFinished() to be
+         * called (typically because the rpc either finished successfully or was
+         * aborted/cancelled).
+         * Returns false if the the rpc is still going and rpcFinished() wasn't
+         * called.
          */
-        virtual void tryFinish() = 0;
+        virtual bool tryFinish() = 0;
 
         friend class RpcTracker;
     };
@@ -82,6 +88,10 @@ class RpcTracker {
     }
 
   PRIVATE:
+    // We're being generous here, effectively, if 2 * MAX_RPCS (definied in MultiOp.h) oldest rpc's
+    // are unable to finish, we give up and press onwards
+    static const uint32_t MAX_TRY_FINISH_FAILURES = 20;
+
     void resizeRpcs(int increment);
 
     /**

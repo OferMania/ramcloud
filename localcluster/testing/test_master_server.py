@@ -35,11 +35,11 @@ class TestMasterServer(unittest.TestCase):
 
     @timeout(ten_minutes)
     def test_graceful_down_can_still_read(self):
-        self.simple_recovery(kill_command = 'killall -SIGTERM rc-server')
+        self.simple_recovery(kill_command = 'pkill -SIGTERM rc-server')
 
     @timeout(ten_minutes)
     def test_forced_down_can_still_read(self):
-        self.simple_recovery(kill_command = 'killall -SIGKILL rc-server')
+        self.simple_recovery(kill_command = 'pkill -SIGKILL rc-server')
 
     @timeout(ten_minutes)
     def test_down_can_still_write(self):
@@ -50,7 +50,7 @@ class TestMasterServer(unittest.TestCase):
         # then kill its rc-server!
         locator =  x.rc_client.testing_get_service_locator(x.table, 'testKey')
         host = cu.get_host(locator)
-        x.node_containers[host].exec_run('killall -SIGKILL rc-server')
+        x.node_containers[host].exec_run('pkill -SIGKILL rc-server')
 
         # after the master server is down, we try to write (not read). We expect
         # the read that follows to correctly contain our value.

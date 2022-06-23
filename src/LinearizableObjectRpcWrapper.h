@@ -69,7 +69,7 @@ class LinearizableObjectRpcWrapper
     uint64_t assignedRpcId;
 
   PRIVATE:
-    virtual void tryFinish();
+    virtual bool tryFinish();
 
     DISALLOW_COPY_AND_ASSIGN(LinearizableObjectRpcWrapper);
 };
