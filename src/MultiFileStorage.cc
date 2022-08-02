@@ -958,6 +958,7 @@ MultiFileStorage::MultiFileStorage(size_t segmentSize,
     }
 
     std::string filePathsCopy(filePathsStr);
+    LOG(NOTICE, "Using backup file: %s", filePathsStr);
     size_t filePathIndex = 0;
     bool doneParsing = false;
     while (!doneParsing) {
