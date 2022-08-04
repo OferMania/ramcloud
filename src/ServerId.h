@@ -96,6 +96,14 @@ class ServerId {
     }
 
     /**
+     * Explicit copy constructor, since we have an explicit assignment operator.
+     */
+    ServerId(const RAMCloud::ServerId& other)
+        : serverId(other.serverId)
+    {
+    }
+
+    /**
      * Obtain the ServerId's uint64_t serialised form.
      */
     uint64_t

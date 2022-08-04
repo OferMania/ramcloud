@@ -33,6 +33,7 @@
 #pragma GCC diagnostic pop
 
 namespace RAMCloud {
+class TimedOpInfo;
 class ClientLeaseAgent;
 class ClientTransactionManager;
 class MultiIncrementObject;
@@ -84,7 +85,8 @@ class RamCloud {
     void coordSplitAndMigrateIndexlet(
             ServerId newOwner, uint64_t tableId, uint8_t indexId,
             const void* splitKey, KeyLength splitKeyLength);
-    uint64_t createTable(const char* name, uint32_t serverSpan = 1);
+    uint64_t createTable(const char* name, uint32_t serverSpan = 1,
+            TimedOpInfo* pto = NULL);
     void dropTable(const char* name);
     void createIndex(uint64_t tableId, uint8_t indexId, uint8_t indexType,
             uint8_t numIndexlets = 1);
@@ -92,7 +94,8 @@ class RamCloud {
     void echo(const char* serviceLocator, const void* message, uint32_t length,
          uint32_t echoLength, Buffer* reply = NULL);
     uint64_t enumerateTable(uint64_t tableId, bool keysOnly,
-         uint64_t tabletFirstHash, Buffer& state, Buffer& objects);
+            uint64_t tabletFirstHash, Buffer& state, Buffer& objects,
+            TimedOpInfo* pto = NULL);
     void getLogMetrics(const char* serviceLocator,
             ProtoBuf::LogMetrics& logMetrics);
     ServerMetrics getMetrics(uint64_t tableId, const void* key,
@@ -104,7 +107,8 @@ class RamCloud {
     void getServerStatistics(const char* serviceLocator,
             ProtoBuf::ServerStatistics& serverStats);
     string* getServiceLocator();
-    uint64_t getTableId(const char* name);
+    uint64_t getTableId(const char* name,
+            TimedOpInfo* pto = NULL);
     double incrementDouble(uint64_t tableId,
             const void* key, uint16_t keyLength,
             double incrementValue, const RejectRules* rejectRules = NULL,
@@ -242,12 +246,14 @@ class CoordSplitAndMigrateIndexletRpc : public CoordinatorRpcWrapper {
 class CreateTableRpc : public CoordinatorRpcWrapper {
   public:
     CreateTableRpc(RamCloud* ramcloud, const char* name,
-            uint32_t serverSpan = 1);
+            uint32_t serverSpan = 1, TimedOpInfo* pto = NULL);
     ~CreateTableRpc() {}
     uint64_t wait();
 
   PRIVATE:
     DISALLOW_COPY_AND_ASSIGN(CreateTableRpc);
+
+    TimedOpInfo* waitInfo;
 };
 
 /**
@@ -345,12 +351,15 @@ class EchoRpc : public RpcWrapper {
 class EnumerateTableRpc : public ObjectRpcWrapper {
   public:
     EnumerateTableRpc(RamCloud* ramcloud, uint64_t tableId, bool keysOnly,
-            uint64_t tabletFirstHash, Buffer& iter, Buffer& objects);
+            uint64_t tabletFirstHash, Buffer& iter, Buffer& objects,
+            TimedOpInfo* pto = NULL);
     ~EnumerateTableRpc() {}
     uint64_t wait(Buffer& nextIter);
 
   PRIVATE:
     DISALLOW_COPY_AND_ASSIGN(EnumerateTableRpc);
+
+    TimedOpInfo* waitInfo;
 };
 
 /**
@@ -464,12 +473,15 @@ class GetServerStatisticsRpc : public RpcWrapper {
  */
 class GetTableIdRpc : public CoordinatorRpcWrapper {
   public:
-    GetTableIdRpc(RamCloud* ramcloud, const char* name);
+    GetTableIdRpc(RamCloud* ramcloud, const char* name,
+            TimedOpInfo* pto = NULL);
     ~GetTableIdRpc() {}
     uint64_t wait();
 
   PRIVATE:
     DISALLOW_COPY_AND_ASSIGN(GetTableIdRpc);
+
+    TimedOpInfo* waitInfo;
 };
 
 /**
@@ -593,6 +605,30 @@ class MigrateTabletRpc : public ObjectRpcWrapper {
 
   PRIVATE:
     DISALLOW_COPY_AND_ASSIGN(MigrateTabletRpc);
+};
+
+/**
+ * A struct for time-capped operations.  If a non-null TimedOpInfo
+ * is passed in to those that use it, and it times out, the RPC will
+ * be canceled and cleaned up.  The struct will contain a status of
+ * STATUS_TIMEOUT, and any other return values (table IDs, read buffers)
+ * should be disregarded.
+ */
+struct TimedOpInfo {
+
+    /**
+     * The time in milliseconds to wait for a blocking RPC call
+     * before canceling and returning STATUS_TIMEOUT.  Expressed
+     * in milliseconds because most useful client timeout durations
+     * are, but converted to internal tick counts for waitInternal.
+     */
+    uint64_t msec;
+
+    /**
+     * The status of the op (either that it succeeded, or the
+     * error in case it didn't) is returned here.
+     */
+    Status status;
 };
 
 /**

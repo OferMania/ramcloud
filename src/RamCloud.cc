@@ -231,6 +231,10 @@ CoordSplitAndMigrateIndexletRpc::CoordSplitAndMigrateIndexletRpc(
  *      to this number of servers according to their hash. This is a temporary
  *      work-around until tablet migration is complete; until then, we must
  *      place tablets on servers statically.
+ * \param (optional) pto
+ *      A pointer to a TimedOpInfo struct with the max time to wait before
+ *      canceling the RPC, in milliseconds.  On output, has the status of
+ *      the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
  *
  * \return
  *      The return value is an identifier for the created table; this is
@@ -238,9 +242,9 @@ CoordSplitAndMigrateIndexletRpc::CoordSplitAndMigrateIndexletRpc(
  *      involving the table.
  */
 uint64_t
-RamCloud::createTable(const char* name, uint32_t serverSpan)
+RamCloud::createTable(const char* name, uint32_t serverSpan, TimedOpInfo* pto)
 {
-    CreateTableRpc rpc(this, name, serverSpan);
+    CreateTableRpc rpc(this, name, serverSpan, pto);
     return rpc.wait();
 }
 
@@ -256,11 +260,16 @@ RamCloud::createTable(const char* name, uint32_t serverSpan)
  * \param serverSpan
  *      The number of servers across which this table will be divided
  *      (defaults to 1).
+ * \param (optional) pto
+ *      A pointer to a TimedOpInfo struct with the max time to wait before
+ *      canceling the RPC, in milliseconds.  On output, has the status of
+ *      the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
  */
 CreateTableRpc::CreateTableRpc(RamCloud* ramcloud,
-        const char* name, uint32_t serverSpan)
+        const char* name, uint32_t serverSpan, TimedOpInfo* pto)
     : CoordinatorRpcWrapper(ramcloud->clientContext,
-            sizeof(WireFormat::CreateTable::Response))
+            sizeof(WireFormat::CreateTable::Response)),
+      waitInfo(pto)
 {
     uint32_t length = downCast<uint32_t>(strlen(name) + 1);
     WireFormat::CreateTable::Request* reqHdr(
@@ -281,12 +290,31 @@ CreateTableRpc::CreateTableRpc(RamCloud* ramcloud,
 uint64_t
 CreateTableRpc::wait()
 {
-    waitInternal(context->dispatch);
-    const WireFormat::CreateTable::Response* respHdr(
-            getResponseHeader<WireFormat::CreateTable>());
-    if (respHdr->common.status != STATUS_OK)
-        ClientException::throwException(HERE, respHdr->common.status);
-    return respHdr->tableId;
+    bool respValid = true;
+    if (waitInfo)
+    {
+        uint64_t abortTime = Cycles::rdtsc() + Cycles::fromMilliseconds(waitInfo->msec);
+        respValid = waitInternal(context->dispatch, abortTime);
+        waitInfo->status = respValid ? STATUS_OK : STATUS_TIMEOUT;
+    }
+    else
+    {
+        respValid = waitInternal(context->dispatch);
+    }
+
+    if (respValid)
+    {
+        const WireFormat::CreateTable::Response* respHdr(
+                getResponseHeader<WireFormat::CreateTable>());
+        if (respHdr->common.status != STATUS_OK)
+            ClientException::throwException(HERE, respHdr->common.status);
+        return respHdr->tableId;
+    }
+    else
+    {
+        cancel();
+        return 0ULL;
+    }
 }
 
 /**
@@ -661,6 +689,10 @@ EchoRpc::wait()
  *      tablet. When this happens, the return value will be set to
  *      point to the next tablet, or will be set to zero if this is
  *      the end of the entire table.
+ * \param (optional) pto
+ *      A pointer to a TimedOpInfo struct with the max time to wait before
+ *      canceling the RPC, in milliseconds.  On output, has the status of
+ *      the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
  *
  * \return
  *       The return value is a key hash indicating where to continue
@@ -672,10 +704,11 @@ EchoRpc::wait()
  */
 uint64_t
 RamCloud::enumerateTable(uint64_t tableId, bool keysOnly,
-        uint64_t tabletFirstHash, Buffer& state, Buffer& objects)
+        uint64_t tabletFirstHash, Buffer& state, Buffer& objects,
+        TimedOpInfo* pto)
 {
     EnumerateTableRpc rpc(this, tableId, keysOnly,
-                            tabletFirstHash, state, objects);
+                          tabletFirstHash, state, objects, pto);
     return rpc.wait(state);
 }
 
@@ -708,11 +741,17 @@ RamCloud::enumerateTable(uint64_t tableId, bool keysOnly,
  * \param[out] objects
  *      After a successful return, this buffer will contain zero or
  *      more objects from the requested tablet.
+ * \param (optional) pto
+ *      A pointer to a TimedOpInfo struct with the max time to wait before
+ *      canceling the RPC, in milliseconds.  On output, has the status of
+ *      the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
  */
 EnumerateTableRpc::EnumerateTableRpc(RamCloud* ramcloud, uint64_t tableId,
-        bool keysOnly, uint64_t tabletFirstHash, Buffer& state, Buffer& objects)
+        bool keysOnly, uint64_t tabletFirstHash, Buffer& state, Buffer& objects,
+        TimedOpInfo* pto)
     : ObjectRpcWrapper(ramcloud->clientContext, tableId, tabletFirstHash,
-            sizeof(WireFormat::Enumerate::Response), &objects)
+            sizeof(WireFormat::Enumerate::Response), &objects),
+      waitInfo(pto)
 {
     WireFormat::Enumerate::Request* reqHdr(
             allocHeader<WireFormat::Enumerate>());
@@ -749,29 +788,52 @@ EnumerateTableRpc::EnumerateTableRpc(RamCloud* ramcloud, uint64_t tableId,
 uint64_t
 EnumerateTableRpc::wait(Buffer& state)
 {
-    simpleWait(context);
-    const WireFormat::Enumerate::Response* respHdr(
-            getResponseHeader<WireFormat::Enumerate>());
-    uint64_t result = respHdr->tabletFirstHash;
-
-    // Copy iterator from response into nextIter buffer.
-    uint32_t iteratorBytes = respHdr->iteratorBytes;
-    state.reset();
-    if (iteratorBytes != 0) {
-        response->copy(
-                downCast<uint32_t>(sizeof(*respHdr) + respHdr->payloadBytes),
-                iteratorBytes, state.alloc(iteratorBytes));
+    bool respValid = true;
+    if (waitInfo)
+    {
+        uint64_t abortTime = Cycles::rdtsc() + Cycles::fromMilliseconds(waitInfo->msec);
+        respValid = waitInternal(context->dispatch, abortTime);
+        waitInfo->status = respValid ? STATUS_OK : STATUS_TIMEOUT;
+    }
+    else
+    {
+        respValid = waitInternal(context->dispatch);
     }
 
-    // Truncate the front and back of the response buffer, leaving just the
-    // objects (the response buffer is the \c objects argument from
-    // the constructor).
-    assert(response->size() == sizeof(*respHdr) +
-            respHdr->iteratorBytes + respHdr->payloadBytes);
-    response->truncateFront(sizeof(*respHdr));
-    response->truncate(response->size() - respHdr->iteratorBytes);
+    if (respValid)
+    {
+        if (responseHeader->status != STATUS_OK)
+            ClientException::throwException(HERE, responseHeader->status);
 
-    return result;
+        simpleWait(context);
+        const WireFormat::Enumerate::Response* respHdr(
+                getResponseHeader<WireFormat::Enumerate>());
+        uint64_t result = respHdr->tabletFirstHash;
+
+        // Copy iterator from response into nextIter buffer.
+        uint32_t iteratorBytes = respHdr->iteratorBytes;
+        state.reset();
+        if (iteratorBytes != 0) {
+            response->copy(
+                    downCast<uint32_t>(sizeof(*respHdr) + respHdr->payloadBytes),
+                    iteratorBytes, state.alloc(iteratorBytes));
+        }
+
+        // Truncate the front and back of the response buffer, leaving just the
+        // objects (the response buffer is the \c objects argument from
+        // the constructor).
+        assert(response->size() == sizeof(*respHdr) +
+                respHdr->iteratorBytes + respHdr->payloadBytes);
+        response->truncateFront(sizeof(*respHdr));
+        response->truncate(response->size() - respHdr->iteratorBytes);
+
+        return result;
+    }
+    else
+    {
+        cancel();
+        return 0ULL;
+    }
 }
 
 /**
@@ -1165,6 +1227,10 @@ RamCloud::getServiceLocator()
  *
  * \param name
  *      Name of the desired table (NULL-terminated string).
+ * \param (optional) pto
+ *      A pointer to a TimedOpInfo struct with the max time to wait before
+ *      canceling the RPC, in milliseconds.  On output, has the status of
+ *      the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
  *
  * \return
  *      The return value is an identifier for the table; this is used
@@ -1174,9 +1240,9 @@ RamCloud::getServiceLocator()
  * \exception TableDoesntExistException
  */
 uint64_t
-RamCloud::getTableId(const char* name)
+RamCloud::getTableId(const char* name, TimedOpInfo* pto)
 {
-    GetTableIdRpc rpc(this, name);
+    GetTableIdRpc rpc(this, name, pto);
     return rpc.wait();
 }
 
@@ -1189,11 +1255,16 @@ RamCloud::getTableId(const char* name)
  *      The RAMCloud object that governs this RPC.
  * \param name
  *      Name of the desired table (NULL-terminated string).
+ * \param (optional) pto
+ *      A pointer to a TimedOpInfo struct with the max time to wait before
+ *      canceling the RPC, in milliseconds.  On output, has the status of
+ *      the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
  */
 GetTableIdRpc::GetTableIdRpc(RamCloud* ramcloud,
-        const char* name)
+        const char* name, TimedOpInfo* pto)
     : CoordinatorRpcWrapper(ramcloud->clientContext,
-            sizeof(WireFormat::GetTableId::Response))
+            sizeof(WireFormat::GetTableId::Response)),
+      waitInfo(pto)
 {
     uint32_t length = downCast<uint32_t>(strlen(name) + 1);
     WireFormat::GetTableId::Request* reqHdr(
@@ -1215,12 +1286,31 @@ GetTableIdRpc::GetTableIdRpc(RamCloud* ramcloud,
 uint64_t
 GetTableIdRpc::wait()
 {
-    waitInternal(context->dispatch);
-    const WireFormat::GetTableId::Response* respHdr(
-            getResponseHeader<WireFormat::GetTableId>());
-    if (respHdr->common.status != STATUS_OK)
-        ClientException::throwException(HERE, respHdr->common.status);
-    return respHdr->tableId;
+    bool respValid = true;
+    if (waitInfo)
+    {
+        uint64_t abortTime = Cycles::rdtsc() + Cycles::fromMilliseconds(waitInfo->msec);
+        respValid = waitInternal(context->dispatch, abortTime);
+        waitInfo->status = respValid ? STATUS_OK : STATUS_TIMEOUT;
+    }
+    else
+    {
+        respValid = waitInternal(context->dispatch);
+    }
+
+    if (respValid)
+    {
+        const WireFormat::GetTableId::Response* respHdr(
+                getResponseHeader<WireFormat::GetTableId>());
+        if (respHdr->common.status != STATUS_OK)
+            ClientException::throwException(HERE, respHdr->common.status);
+        return respHdr->tableId;
+    }
+    else
+    {
+        cancel();
+        return 0ULL;
+    }
 }
 
 /**
@@ -2600,8 +2690,8 @@ RamCloud::getRuntimeOption(const char* option, Buffer* value)
 }
 
 /**
- * Constructor for SetRuntimeOptionRpc: initiates an RPC in the same way as
- * #RamCloud::dropTable and returns once the RPC has been initiated,
+ * Constructor for GetRuntimeOptionRpc: initiates an RPC in the same way as
+ * #RamCloud::getRuntimeOption and returns once the RPC has been initiated,
  * without waiting for it to complete.
  *
  * \param ramcloud
@@ -2748,7 +2838,7 @@ RamCloud::setRuntimeOption(const char* option, const char* value)
 
 /**
  * Constructor for SetRuntimeOptionRpc: initiates an RPC in the same way as
- * #RamCloud::dropTable, but returns once the RPC has been initiated,
+ * #RamCloud::setRunTimeOption, but returns once the RPC has been initiated,
  * without waiting for it to complete.
  *
  * \param ramcloud

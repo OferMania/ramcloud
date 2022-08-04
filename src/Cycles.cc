@@ -136,6 +136,46 @@ Cycles::fromSeconds(double seconds, double cyclesPerSec)
 
 /**
  * Given an elapsed time measured in cycles, return an integer
+ * giving the corresponding time in milliseconds. Note: toSeconds()
+ * is faster than this method.
+ * \param cycles
+ *      Difference between the results of two calls to rdtsc.
+ * \param cyclesPerSec
+ *      Optional parameter to specify the frequency of the counter that #cycles
+ *      was taken from. Useful when converting a remote machine's tick counter
+ *      to seconds. The default value of 0 will use the local processor's
+ *      computed counter frequency.
+ * \return
+ *      The time in milliseconds corresponding to cycles (rounded).
+ */
+uint64_t
+Cycles::toMilliseconds(uint64_t cycles, double cyclesPerSec)
+{
+    return toNanoseconds(cycles, cyclesPerSec) / 1000000;
+}
+
+/**
+ * Given a number of milliseconds, return an approximate number of
+ * cycles for an equivalent time length.
+ * \param us
+ *      Number of milliseconds.
+ * \param cyclesPerSec
+ *      Optional parameter to specify the frequency of the counter that #cycles
+ *      was taken from. Useful when converting a remote machine's tick counter
+ *      to seconds. The default value of 0 will use the local processor's
+ *      computed counter frequency.
+ * \return
+ *      The approximate number of cycles for the same time length.
+ */
+uint64_t
+Cycles::fromMilliseconds(uint64_t ms, double cyclesPerSec)
+{
+    return fromNanoseconds(1000000 * ms, cyclesPerSec);
+}
+
+
+/**
+ * Given an elapsed time measured in cycles, return an integer
  * giving the corresponding time in microseconds. Note: toSeconds()
  * is faster than this method.
  * \param cycles
