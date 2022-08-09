@@ -85,15 +85,19 @@ class RamCloud {
     void coordSplitAndMigrateIndexlet(
             ServerId newOwner, uint64_t tableId, uint8_t indexId,
             const void* splitKey, KeyLength splitKeyLength);
-    uint64_t createTable(const char* name, uint32_t serverSpan = 1,
-            TimedOpInfo* pto = NULL);
+    uint64_t createTable(const char* name, uint32_t serverSpan = 1);
+    uint64_t createTableTimed(const char* name, TimedOpInfo* pto,
+            uint32_t serverSpan = 1);
     void dropTable(const char* name);
+    void dropTableTimed(const char* name, TimedOpInfo* pto);
     void createIndex(uint64_t tableId, uint8_t indexId, uint8_t indexType,
             uint8_t numIndexlets = 1);
     void dropIndex(uint64_t tableId, uint8_t indexId);
     void echo(const char* serviceLocator, const void* message, uint32_t length,
          uint32_t echoLength, Buffer* reply = NULL);
     uint64_t enumerateTable(uint64_t tableId, bool keysOnly,
+            uint64_t tabletFirstHash, Buffer& state, Buffer& objects);
+    uint64_t enumerateTableTimed(uint64_t tableId, bool keysOnly,
             uint64_t tabletFirstHash, Buffer& state, Buffer& objects,
             TimedOpInfo* pto = NULL);
     void getLogMetrics(const char* serviceLocator,
@@ -107,8 +111,8 @@ class RamCloud {
     void getServerStatistics(const char* serviceLocator,
             ProtoBuf::ServerStatistics& serverStats);
     string* getServiceLocator();
-    uint64_t getTableId(const char* name,
-            TimedOpInfo* pto = NULL);
+    uint64_t getTableId(const char* name);
+    uint64_t getTableIdTimed(const char* name, TimedOpInfo* pto = NULL);
     double incrementDouble(uint64_t tableId,
             const void* key, uint16_t keyLength,
             double incrementValue, const RejectRules* rejectRules = NULL,
@@ -246,12 +250,27 @@ class CoordSplitAndMigrateIndexletRpc : public CoordinatorRpcWrapper {
 class CreateTableRpc : public CoordinatorRpcWrapper {
   public:
     CreateTableRpc(RamCloud* ramcloud, const char* name,
-            uint32_t serverSpan = 1, TimedOpInfo* pto = NULL);
+            uint32_t serverSpan = 1);
     ~CreateTableRpc() {}
     uint64_t wait();
 
   PRIVATE:
     DISALLOW_COPY_AND_ASSIGN(CreateTableRpc);
+};
+
+/**
+ * Encapsulates the state of a RamCloud::createTable operation,
+ * allowing it to execute asynchronously.
+ */
+class CreateTableTimedRpc : public CoordinatorRpcWrapper {
+  public:
+    CreateTableTimedRpc(RamCloud* ramcloud, const char* name,
+            TimedOpInfo* pto, uint32_t serverSpan = 1);
+    ~CreateTableTimedRpc() {}
+    uint64_t wait();
+
+  PRIVATE:
+    DISALLOW_COPY_AND_ASSIGN(CreateTableTimedRpc);
 
     TimedOpInfo* waitInfo;
 };
@@ -269,6 +288,24 @@ class DropTableRpc : public CoordinatorRpcWrapper {
 
   PRIVATE:
     DISALLOW_COPY_AND_ASSIGN(DropTableRpc);
+};
+
+/**
+ * Encapsulates the state of a RamCloud::dropTable operation,
+ * allowing it to execute asynchronously.
+ */
+class DropTableTimedRpc : public CoordinatorRpcWrapper {
+  public:
+    DropTableTimedRpc(RamCloud* ramcloud, const char* name,
+            TimedOpInfo* pto);
+    ~DropTableTimedRpc() {}
+    /// \copydoc RpcWrapper::docForWait
+    void wait();
+
+  PRIVATE:
+    DISALLOW_COPY_AND_ASSIGN(DropTableTimedRpc);
+
+    TimedOpInfo* waitInfo;
 };
 
 /**
@@ -351,13 +388,30 @@ class EchoRpc : public RpcWrapper {
 class EnumerateTableRpc : public ObjectRpcWrapper {
   public:
     EnumerateTableRpc(RamCloud* ramcloud, uint64_t tableId, bool keysOnly,
-            uint64_t tabletFirstHash, Buffer& iter, Buffer& objects,
-            TimedOpInfo* pto = NULL);
+            uint64_t tabletFirstHash, Buffer& iter, Buffer& objects);
     ~EnumerateTableRpc() {}
     uint64_t wait(Buffer& nextIter);
 
   PRIVATE:
     DISALLOW_COPY_AND_ASSIGN(EnumerateTableRpc);
+
+    TimedOpInfo* waitInfo;
+};
+
+/**
+ * Encapsulates the state of a RamCloud::enumerateTableTimed
+ * request, allowing it to execute asynchronously.
+ */
+class EnumerateTableTimedRpc : public ObjectRpcWrapper {
+  public:
+    EnumerateTableTimedRpc(RamCloud* ramcloud, uint64_t tableId, bool keysOnly,
+            uint64_t tabletFirstHash, Buffer& iter, Buffer& objects,
+            TimedOpInfo* pto);
+    ~EnumerateTableTimedRpc() {}
+    uint64_t wait(Buffer& nextIter);
+
+  PRIVATE:
+    DISALLOW_COPY_AND_ASSIGN(EnumerateTableTimedRpc);
 
     TimedOpInfo* waitInfo;
 };
@@ -473,13 +527,27 @@ class GetServerStatisticsRpc : public RpcWrapper {
  */
 class GetTableIdRpc : public CoordinatorRpcWrapper {
   public:
-    GetTableIdRpc(RamCloud* ramcloud, const char* name,
-            TimedOpInfo* pto = NULL);
+    GetTableIdRpc(RamCloud* ramcloud, const char* name);
     ~GetTableIdRpc() {}
     uint64_t wait();
 
   PRIVATE:
     DISALLOW_COPY_AND_ASSIGN(GetTableIdRpc);
+};
+
+/**
+ * Encapsulates the state of a RamCloud::getTableIdTimed operation,
+ * allowing it to execute asynchronously.
+ */
+class GetTableIdTimedRpc : public CoordinatorRpcWrapper {
+  public:
+    GetTableIdTimedRpc(RamCloud* ramcloud, const char* name,
+            TimedOpInfo* pto = NULL);
+    ~GetTableIdTimedRpc() {}
+    uint64_t wait();
+
+  PRIVATE:
+    DISALLOW_COPY_AND_ASSIGN(GetTableIdTimedRpc);
 
     TimedOpInfo* waitInfo;
 };

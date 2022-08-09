@@ -85,6 +85,7 @@ CLIENT_SRCFILES := \
 		   src/PerfStats.cc \
 		   src/PortAlarm.cc \
 		   src/RamCloud.cc \
+		   src/RamCloudTimed.cc \
 		   src/RawMetrics.cc \
 		   src/RpcLevel.cc \
 		   src/RpcTracker.cc \
