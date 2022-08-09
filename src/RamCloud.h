@@ -394,8 +394,6 @@ class EnumerateTableRpc : public ObjectRpcWrapper {
 
   PRIVATE:
     DISALLOW_COPY_AND_ASSIGN(EnumerateTableRpc);
-
-    TimedOpInfo* waitInfo;
 };
 
 /**
