@@ -38,6 +38,15 @@
 namespace RAMCloud {
 
 /**
+ * == NOTE ==
+ *   This file implements the synchronous methods declared in RamCloud.h
+ *   as well as the RPC wrapper objects to support them.
+ *   Synchronous-with-timeout flavors are in RamCloudTimed.cc.
+ *   Otherwise, the class file is simply too large to manage, and confuses
+ *   the symbol table helper in VSCode, for instance.
+ */
+
+/**
  * Construct a RamCloud for a particular cluster.
  *
  * \param options

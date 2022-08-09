@@ -79,7 +79,19 @@ static const RejectRules defaultRejectRules = {1, 0, 0, 0, 0};
  *
  * In multi-threaded clients there must be a separate RamCloud object for
  * each thread; as of 5/2012 these objects are not thread-safe.
+ *
+ * == NOTE ==
+ *   This interface declares both synchronous and synchronous-with-timeout
+ *   methods on the RamCloud object, as well as the RPC wrapper objects to
+ *   support both.  The implementation is divided between RamCloud.cc and
+ *   RamCloudTimed.cc respectively.  Otherwise, the class file is simply
+ *   too large to manage, and confuses the symbol table helper in VSCode,
+ *   for instance.
+ *   The division is simple:  anything with "Timed" in the name goes to
+ *   supporting the flavor that can take a cap on time to wait for execution
+ *   and return a TIMEOUT status rather than blocking essentially forever.
  */
+
 class RamCloud {
   public:
     void coordSplitAndMigrateIndexlet(
@@ -99,7 +111,7 @@ class RamCloud {
             uint64_t tabletFirstHash, Buffer& state, Buffer& objects);
     uint64_t enumerateTableTimed(uint64_t tableId, bool keysOnly,
             uint64_t tabletFirstHash, Buffer& state, Buffer& objects,
-            TimedOpInfo* pto = NULL);
+            TimedOpInfo* pto);
     void getLogMetrics(const char* serviceLocator,
             ProtoBuf::LogMetrics& logMetrics);
     ServerMetrics getMetrics(uint64_t tableId, const void* key,
@@ -112,7 +124,7 @@ class RamCloud {
             ProtoBuf::ServerStatistics& serverStats);
     string* getServiceLocator();
     uint64_t getTableId(const char* name);
-    uint64_t getTableIdTimed(const char* name, TimedOpInfo* pto = NULL);
+    uint64_t getTableIdTimed(const char* name, TimedOpInfo* pto);
     double incrementDouble(uint64_t tableId,
             const void* key, uint16_t keyLength,
             double incrementValue, const RejectRules* rejectRules = NULL,
@@ -540,7 +552,7 @@ class GetTableIdRpc : public CoordinatorRpcWrapper {
 class GetTableIdTimedRpc : public CoordinatorRpcWrapper {
   public:
     GetTableIdTimedRpc(RamCloud* ramcloud, const char* name,
-            TimedOpInfo* pto = NULL);
+            TimedOpInfo* pto);
     ~GetTableIdTimedRpc() {}
     uint64_t wait();
 

@@ -38,8 +38,15 @@
 namespace RAMCloud {
 
 /**
- * This file has synchronous-with-timeout flavors of some client interfaces.
+ * == NOTE ==
+ *   This file implements the synchronous-with-timeout flavors of Ramcloud
+ *   object methods declared in RamCloud.h as well as the RPC wrapper objects
+ *   to support them.
+ *   Purely synchronous (and simpler, but blocking) flavors are in RamCloud.cc.
+ *   Otherwise, the class file is simply too large to manage, and confuses
+ *   the symbol table helper in VSCode, for instance.
  */
+
 
 /**
  * Create a new table.
