@@ -469,6 +469,7 @@ INSTALL_INCLUDES := \
     src/OptionParser.h \
     src/PerfStats.h \
     src/RamCloud.h \
+    src/RamCloudTimed.h \
     src/RpcLevel.h \
     src/RpcWrapper.h \
     src/RpcTracker.h \

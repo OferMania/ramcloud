@@ -33,7 +33,6 @@
 #pragma GCC diagnostic pop
 
 namespace RAMCloud {
-class TimedOpInfo;
 class ClientLeaseAgent;
 class ClientTransactionManager;
 class MultiIncrementObject;
@@ -80,16 +79,6 @@ static const RejectRules defaultRejectRules = {1, 0, 0, 0, 0};
  * In multi-threaded clients there must be a separate RamCloud object for
  * each thread; as of 5/2012 these objects are not thread-safe.
  *
- * == NOTE ==
- *   This interface declares both synchronous and synchronous-with-timeout
- *   methods on the RamCloud object, as well as the RPC wrapper objects to
- *   support both.  The implementation is divided between RamCloud.cc and
- *   RamCloudTimed.cc respectively.  Otherwise, the class file is simply
- *   too large to manage, and confuses the symbol table helper in VSCode,
- *   for instance.
- *   The division is simple:  anything with "Timed" in the name goes to
- *   supporting the flavor that can take a cap on time to wait for execution
- *   and return a TIMEOUT status rather than blocking essentially forever.
  */
 
 class RamCloud {
@@ -98,10 +87,7 @@ class RamCloud {
             ServerId newOwner, uint64_t tableId, uint8_t indexId,
             const void* splitKey, KeyLength splitKeyLength);
     uint64_t createTable(const char* name, uint32_t serverSpan = 1);
-    uint64_t createTableTimed(const char* name, TimedOpInfo* pto,
-            uint32_t serverSpan = 1);
     void dropTable(const char* name);
-    void dropTableTimed(const char* name, TimedOpInfo* pto);
     void createIndex(uint64_t tableId, uint8_t indexId, uint8_t indexType,
             uint8_t numIndexlets = 1);
     void dropIndex(uint64_t tableId, uint8_t indexId);
@@ -109,9 +95,6 @@ class RamCloud {
          uint32_t echoLength, Buffer* reply = NULL);
     uint64_t enumerateTable(uint64_t tableId, bool keysOnly,
             uint64_t tabletFirstHash, Buffer& state, Buffer& objects);
-    uint64_t enumerateTableTimed(uint64_t tableId, bool keysOnly,
-            uint64_t tabletFirstHash, Buffer& state, Buffer& objects,
-            TimedOpInfo* pto);
     void getLogMetrics(const char* serviceLocator,
             ProtoBuf::LogMetrics& logMetrics);
     ServerMetrics getMetrics(uint64_t tableId, const void* key,
@@ -124,7 +107,6 @@ class RamCloud {
             ProtoBuf::ServerStatistics& serverStats);
     string* getServiceLocator();
     uint64_t getTableId(const char* name);
-    uint64_t getTableIdTimed(const char* name, TimedOpInfo* pto);
     double incrementDouble(uint64_t tableId,
             const void* key, uint16_t keyLength,
             double incrementValue, const RejectRules* rejectRules = NULL,
@@ -271,23 +253,6 @@ class CreateTableRpc : public CoordinatorRpcWrapper {
 };
 
 /**
- * Encapsulates the state of a RamCloud::createTable operation,
- * allowing it to execute asynchronously.
- */
-class CreateTableTimedRpc : public CoordinatorRpcWrapper {
-  public:
-    CreateTableTimedRpc(RamCloud* ramcloud, const char* name,
-            TimedOpInfo* pto, uint32_t serverSpan = 1);
-    ~CreateTableTimedRpc() {}
-    uint64_t wait();
-
-  PRIVATE:
-    DISALLOW_COPY_AND_ASSIGN(CreateTableTimedRpc);
-
-    TimedOpInfo* waitInfo;
-};
-
-/**
  * Encapsulates the state of a RamCloud::dropTable operation,
  * allowing it to execute asynchronously.
  */
@@ -300,24 +265,6 @@ class DropTableRpc : public CoordinatorRpcWrapper {
 
   PRIVATE:
     DISALLOW_COPY_AND_ASSIGN(DropTableRpc);
-};
-
-/**
- * Encapsulates the state of a RamCloud::dropTable operation,
- * allowing it to execute asynchronously.
- */
-class DropTableTimedRpc : public CoordinatorRpcWrapper {
-  public:
-    DropTableTimedRpc(RamCloud* ramcloud, const char* name,
-            TimedOpInfo* pto);
-    ~DropTableTimedRpc() {}
-    /// \copydoc RpcWrapper::docForWait
-    void wait();
-
-  PRIVATE:
-    DISALLOW_COPY_AND_ASSIGN(DropTableTimedRpc);
-
-    TimedOpInfo* waitInfo;
 };
 
 /**
@@ -406,24 +353,6 @@ class EnumerateTableRpc : public ObjectRpcWrapper {
 
   PRIVATE:
     DISALLOW_COPY_AND_ASSIGN(EnumerateTableRpc);
-};
-
-/**
- * Encapsulates the state of a RamCloud::enumerateTableTimed
- * request, allowing it to execute asynchronously.
- */
-class EnumerateTableTimedRpc : public ObjectRpcWrapper {
-  public:
-    EnumerateTableTimedRpc(RamCloud* ramcloud, uint64_t tableId, bool keysOnly,
-            uint64_t tabletFirstHash, Buffer& iter, Buffer& objects,
-            TimedOpInfo* pto);
-    ~EnumerateTableTimedRpc() {}
-    uint64_t wait(Buffer& nextIter);
-
-  PRIVATE:
-    DISALLOW_COPY_AND_ASSIGN(EnumerateTableTimedRpc);
-
-    TimedOpInfo* waitInfo;
 };
 
 /**
@@ -543,23 +472,6 @@ class GetTableIdRpc : public CoordinatorRpcWrapper {
 
   PRIVATE:
     DISALLOW_COPY_AND_ASSIGN(GetTableIdRpc);
-};
-
-/**
- * Encapsulates the state of a RamCloud::getTableIdTimed operation,
- * allowing it to execute asynchronously.
- */
-class GetTableIdTimedRpc : public CoordinatorRpcWrapper {
-  public:
-    GetTableIdTimedRpc(RamCloud* ramcloud, const char* name,
-            TimedOpInfo* pto);
-    ~GetTableIdTimedRpc() {}
-    uint64_t wait();
-
-  PRIVATE:
-    DISALLOW_COPY_AND_ASSIGN(GetTableIdTimedRpc);
-
-    TimedOpInfo* waitInfo;
 };
 
 /**
@@ -683,30 +595,6 @@ class MigrateTabletRpc : public ObjectRpcWrapper {
 
   PRIVATE:
     DISALLOW_COPY_AND_ASSIGN(MigrateTabletRpc);
-};
-
-/**
- * A struct for time-capped operations.  If a non-null TimedOpInfo
- * is passed in to those that use it, and it times out, the RPC will
- * be canceled and cleaned up.  The struct will contain a status of
- * STATUS_TIMEOUT, and any other return values (table IDs, read buffers)
- * should be disregarded.
- */
-struct TimedOpInfo {
-
-    /**
-     * The time in milliseconds to wait for a blocking RPC call
-     * before canceling and returning STATUS_TIMEOUT.  Expressed
-     * in milliseconds because most useful client timeout durations
-     * are, but converted to internal tick counts for waitInternal.
-     */
-    uint64_t msec;
-
-    /**
-     * The status of the op (either that it succeeded, or the
-     * error in case it didn't) is returned here.
-     */
-    Status status;
 };
 
 /**

@@ -15,7 +15,7 @@
 
 #include <stdarg.h>
 
-#include "RamCloud.h"
+#include "RamCloudTimed.h"
 #include "ClientLeaseAgent.h"
 #include "ClientTransactionManager.h"
 #include "CoordinatorClient.h"
@@ -40,23 +40,35 @@ namespace RAMCloud {
 /**
  * == NOTE ==
  *   This file implements the synchronous-with-timeout flavors of Ramcloud
- *   object methods declared in RamCloud.h as well as the RPC wrapper objects
+ *   object methods declared in RamCloudTimed.h, as well as the RPC wrapper objects
  *   to support them.
  *   Purely synchronous (and simpler, but blocking) flavors are in RamCloud.cc.
- *   Otherwise, the class file is simply too large to manage, and confuses
- *   the symbol table helper in VSCode, for instance.
  */
 
+/**
+ * Constructor for a timed client object.  Note that it has-a pointer to a
+ * vanilla RamCloud object.
+ *
+ * \param ramcloud
+ *      Overall information about the calling client.
+ */
+RamCloudTimed::RamCloudTimed(RamCloud* ramcloud)
+    : ramcloud(ramcloud)
+    , status(STATUS_OK)
+{
+}
+
+RamCloudTimed::~RamCloudTimed()
+{
+}
 
 /**
  * Create a new table.
  *
  * \param name
  *      Name for the new table (NULL-terminated string).
- * \param pto
- *      A pointer to a TimedOpInfo struct with the max time to wait before
- *      canceling the RPC, in milliseconds.  On output, has the status of
- *      the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
+ * \param msec
+ *      Max time to wait before canceling the RPC, in milliseconds.
  * \param serverSpan
  *      The number of servers across which this table will be divided
  *      (defaults to 1). Keys within the table will be evenly distributed
@@ -74,37 +86,29 @@ namespace RAMCloud {
  *       while communicating with the target server.
  */
 uint64_t
-RamCloud::createTableTimed(const char* name, TimedOpInfo* pto, uint32_t serverSpan)
+RamCloudTimed::createTable(const char* name, uint64_t msec, uint32_t serverSpan)
 {
-    // It's a programming error to call the timed flavor without a TimedOpInfo.
-    if (pto == NULL)
-        ClientException::throwException(HERE, STATUS_INVALID_PARAMETER);
-    CreateTableTimedRpc rpc(this, name, pto, serverSpan);
-    return rpc.wait();
+    CreateTableTimedRpc rpc(ramcloud, name, serverSpan);
+    return rpc.wait(msec, &status);
 }
 
 /**
  * Constructor for CreateTableTimedRpc: initiates an RPC in the same way as
- * #RamCloud::createTable, but returns once the RPC has been initiated,
+ * #RamCloudTimed::createTable, but returns once the RPC has been initiated,
  * without waiting for it to complete.
  *
  * \param ramcloud
  *      The RAMCloud object that governs this RPC.
  * \param name
  *      Name for the new table (NULL-terminated string).
- * \param (optional) pto
- *      A pointer to a TimedOpInfo struct with the max time to wait before
- *      canceling the RPC, in milliseconds.  On output, has the status of
- *      the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
  * \param serverSpan
  *      The number of servers across which this table will be divided
  *      (defaults to 1).
  */
 CreateTableTimedRpc::CreateTableTimedRpc(RamCloud* ramcloud,
-        const char* name, TimedOpInfo* pto, uint32_t serverSpan)
+        const char* name, uint32_t serverSpan)
     : CoordinatorRpcWrapper(ramcloud->clientContext,
-            sizeof(WireFormat::CreateTable::Response)),
-      waitInfo(pto)
+            sizeof(WireFormat::CreateTable::Response))
 {
     uint32_t length = downCast<uint32_t>(strlen(name) + 1);
     WireFormat::CreateTable::Request* reqHdr(
@@ -117,15 +121,20 @@ CreateTableTimedRpc::CreateTableTimedRpc(RamCloud* ramcloud,
 
 /**
  * Wait for the RPC to complete, and return the same results as
- * #RamCloud::createTable.
+ * #RamCloudTimed::createTable.
+ *
+ * \param msec
+ *      Max time to wait before canceling the RPC, in milliseconds.
+ * \param pStatus
+ *      On output, has the status of the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
  *
  * \return
- *      The return value is an identifier for the created table.
+ *      The return value is an identifier for the created table, if STATUS_OK.
  */
 uint64_t
-CreateTableTimedRpc::wait()
+CreateTableTimedRpc::wait(uint64_t msec, Status* pStatus)
 {
-    uint64_t abortTime = Cycles::rdtsc() + Cycles::fromMilliseconds(waitInfo->msec);
+    uint64_t abortTime = Cycles::rdtsc() + Cycles::fromMilliseconds(msec);
     bool     respValid = waitInternal(context->dispatch, abortTime);
 
     if (respValid)
@@ -134,13 +143,13 @@ CreateTableTimedRpc::wait()
                 getResponseHeader<WireFormat::CreateTable>());
         if (respHdr->common.status != STATUS_OK)
             ClientException::throwException(HERE, respHdr->common.status);
-        waitInfo->status = STATUS_OK;
+        *pStatus = STATUS_OK;
         return respHdr->tableId;
     }
     else
     {
         cancel();
-        waitInfo->status = STATUS_TIMEOUT;
+        *pStatus = STATUS_TIMEOUT;
         return 0ULL;
     }
 }
@@ -155,44 +164,33 @@ CreateTableTimedRpc::wait()
  *
  * \param name
  *      Name of the table to delete (NULL-terminated string).
- * \param pto
- *      A pointer to a TimedOpInfo struct with the max time to wait before
- *      canceling the RPC, in milliseconds.  On output, has the status of
- *      the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
+ * \param msec
+ *      Max time to wait before canceling the RPC, in milliseconds.
  *
  * \throw ClientException
  *       Thrown on invalid parameter or if an unrecoverable error occurred
  *       while communicating with the target server.
  */
 void
-RamCloud::dropTableTimed(const char* name, TimedOpInfo* pto)
+RamCloudTimed::dropTable(const char* name, uint64_t msec)
 {
-    // It's a programming error to call the timed flavor without a TimedOpInfo.
-    if (pto == NULL)
-        ClientException::throwException(HERE, STATUS_INVALID_PARAMETER);
-    DropTableTimedRpc rpc(this, name, pto);
-    rpc.wait();
+    DropTableTimedRpc rpc(ramcloud, name);
+    rpc.wait(msec, &status);
 }
 
 /**
  * Constructor for DropTableTimedRpc: initiates an RPC in the same way as
- * #RamCloud::dropTable, but returns once the RPC has been initiated,
+ * #RamCloudTimed::dropTable, but returns once the RPC has been initiated,
  * without waiting for it to complete.
  *
  * \param ramcloud
  *      The RAMCloud object that governs this RPC.
  * \param name
  *      Name of the table to delete (NULL-terminated string).
- * \param pto
- *      A pointer to a TimedOpInfo struct with the max time to wait before
- *      canceling the RPC, in milliseconds.  On output, has the status of
- *      the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
  */
-DropTableTimedRpc::DropTableTimedRpc(RamCloud* ramcloud, const char* name,
-        TimedOpInfo* pto)
+DropTableTimedRpc::DropTableTimedRpc(RamCloud* ramcloud, const char* name)
     : CoordinatorRpcWrapper(ramcloud->clientContext,
-            sizeof(WireFormat::DropTable::Response)),
-      waitInfo(pto)
+            sizeof(WireFormat::DropTable::Response))
 {
     uint32_t length = downCast<uint32_t>(strlen(name) + 1);
     WireFormat::DropTable::Request* reqHdr(
@@ -204,25 +202,30 @@ DropTableTimedRpc::DropTableTimedRpc(RamCloud* ramcloud, const char* name,
 
 /**
  * Wait for the RPC to complete, and return the same results as
- * #RamCloud::dropTable.
+ * #RamCloudTimed::dropTable.
+ *
+ * \param msec
+ *      Max time to wait before canceling the RPC, in milliseconds.
+ * \param pStatus
+ *      On output, has the status of the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
  *
  * \return
  *      The return value is an identifier for the created table.
  */
 void
-DropTableTimedRpc::wait()
+DropTableTimedRpc::wait(uint64_t msec, Status* pStatus)
 {
-    uint64_t abortTime = Cycles::rdtsc() + Cycles::fromMilliseconds(waitInfo->msec);
+    uint64_t abortTime = Cycles::rdtsc() + Cycles::fromMilliseconds(msec);
     bool     respValid = waitInternal(context->dispatch, abortTime);
 
     if (respValid)
     {
-        waitInfo->status = responseHeader->status;
+        *pStatus = responseHeader->status;
     }
     else
     {
         cancel();
-        waitInfo->status = STATUS_TIMEOUT;
+        *pStatus = STATUS_TIMEOUT;
     }
     return;
 }
@@ -264,10 +267,8 @@ DropTableTimedRpc::wait()
  *      tablet. When this happens, the return value will be set to
  *      point to the next tablet, or will be set to zero if this is
  *      the end of the entire table.
- * \param (optional) pto
- *      A pointer to a TimedOpInfo struct with the max time to wait before
- *      canceling the RPC, in milliseconds.  On output, has the status of
- *      the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
+ * \param msec
+ *      Max time to wait before canceling the RPC, in milliseconds.
  *
  * \return
  *       The return value is a key hash indicating where to continue
@@ -278,21 +279,18 @@ DropTableTimedRpc::wait()
  *       means that enumeration has finished.
  */
 uint64_t
-RamCloud::enumerateTableTimed(uint64_t tableId, bool keysOnly,
+RamCloudTimed::enumerateTable(uint64_t tableId, bool keysOnly,
         uint64_t tabletFirstHash, Buffer& state, Buffer& objects,
-        TimedOpInfo* pto)
+        uint64_t msec)
 {
-    // It's a programming error to call the timed flavor without a TimedOpInfo.
-    if (pto == NULL)
-        ClientException::throwException(HERE, STATUS_INVALID_PARAMETER);
-    EnumerateTableTimedRpc rpc(this, tableId, keysOnly,
-                          tabletFirstHash, state, objects, pto);
-    return rpc.wait(state);
+    EnumerateTableTimedRpc rpc(ramcloud, tableId, keysOnly,
+                          tabletFirstHash, state, objects);
+    return rpc.wait(state, msec, &status);
 }
 
 /**
  * Constructor for EnumerateTableTimedRpc: initiates an RPC in the same way as
- * #RamCloud::enumerateTable, but returns once the RPC has been initiated,
+ * #RamCloudTimed::enumerateTable, but returns once the RPC has been initiated,
  * without waiting for it to complete.
  *
  * \param ramcloud
@@ -319,17 +317,11 @@ RamCloud::enumerateTableTimed(uint64_t tableId, bool keysOnly,
  * \param[out] objects
  *      After a successful return, this buffer will contain zero or
  *      more objects from the requested tablet.
- * \param (optional) pto
- *      A pointer to a TimedOpInfo struct with the max time to wait before
- *      canceling the RPC, in milliseconds.  On output, has the status of
- *      the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
  */
 EnumerateTableTimedRpc::EnumerateTableTimedRpc(RamCloud* ramcloud, uint64_t tableId,
-        bool keysOnly, uint64_t tabletFirstHash, Buffer& state, Buffer& objects,
-        TimedOpInfo* pto)
+        bool keysOnly, uint64_t tabletFirstHash, Buffer& state, Buffer& objects)
     : ObjectRpcWrapper(ramcloud->clientContext, tableId, tabletFirstHash,
-            sizeof(WireFormat::Enumerate::Response), &objects),
-      waitInfo(pto)
+            sizeof(WireFormat::Enumerate::Response), &objects)
 {
     WireFormat::Enumerate::Request* reqHdr(
             allocHeader<WireFormat::Enumerate>());
@@ -344,13 +336,18 @@ EnumerateTableTimedRpc::EnumerateTableTimedRpc(RamCloud* ramcloud, uint64_t tabl
 
 /**
  * Wait for an enumerate RPC to complete, and return the same results as
- * #RamCloud::enumerate.
+ * #RamCloudTimed::enumerate.
  *
  * \param[out] state
  *      Will be filled in with the current state of the enumeration as of
  *      this method's return.  Must be passed back to this class as the
  *      \a iter parameter to the constructor when retrieving the next
  *      objects.
+ * \param msec
+ *      Max time to wait before canceling the RPC, in milliseconds.
+ * \param pStatus
+ *      On output, has the status of the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
+ *
  * \return
  *       The return value is a key hash indicating where to continue
  *       enumeration (the starting key hash for the tablet where
@@ -364,9 +361,9 @@ EnumerateTableTimedRpc::EnumerateTableTimedRpc(RamCloud* ramcloud, uint64_t tabl
  *
  */
 uint64_t
-EnumerateTableTimedRpc::wait(Buffer& state)
+EnumerateTableTimedRpc::wait(Buffer& state, uint64_t msec, Status* pStatus)
 {
-    uint64_t abortTime = Cycles::rdtsc() + Cycles::fromMilliseconds(waitInfo->msec);
+    uint64_t abortTime = Cycles::rdtsc() + Cycles::fromMilliseconds(msec);
     bool respValid = waitInternal(context->dispatch, abortTime);
 
     if (respValid)
@@ -395,13 +392,13 @@ EnumerateTableTimedRpc::wait(Buffer& state)
         response->truncateFront(sizeof(*respHdr));
         response->truncate(response->size() - respHdr->iteratorBytes);
 
-        waitInfo->status = STATUS_OK;
+        *pStatus = STATUS_OK;
         return result;
     }
     else
     {
         cancel();
-        waitInfo->status = STATUS_TIMEOUT;
+        *pStatus = STATUS_TIMEOUT;
         return 0ULL;
     }
 }
@@ -412,10 +409,8 @@ EnumerateTableTimedRpc::wait(Buffer& state)
  *
  * \param name
  *      Name of the desired table (NULL-terminated string).
- * \param (optional) pto
- *      A pointer to a TimedOpInfo struct with the max time to wait before
- *      canceling the RPC, in milliseconds.  On output, has the status of
- *      the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
+ * \param msec
+ *      Max time to wait before canceling the RPC, in milliseconds.
  *
  * \return
  *      The return value is an identifier for the table; this is used
@@ -425,34 +420,26 @@ EnumerateTableTimedRpc::wait(Buffer& state)
  * \exception TableDoesntExistException
  */
 uint64_t
-RamCloud::getTableIdTimed(const char* name, TimedOpInfo* pto)
+RamCloudTimed::getTableId(const char* name, uint64_t msec)
 {
-    // It's a programming error to call the timed flavor without a TimedOpInfo.
-    if (pto == NULL)
-        ClientException::throwException(HERE, STATUS_INVALID_PARAMETER);
-    GetTableIdTimedRpc rpc(this, name, pto);
-    return rpc.wait();
+    GetTableIdTimedRpc rpc(ramcloud, name);
+    return rpc.wait(msec, &status);
 }
 
 /**
  * Constructor for GetTableIdTimedRpc: initiates an RPC in the same way as
- * #RamCloud::GetTableIdTimed, but returns once the RPC has been initiated,
+ * #RamCloudTimed::GetTableIdTimed, but returns once the RPC has been initiated,
  * without waiting for it to complete.
  *
  * \param ramcloud
  *      The RAMCloud object that governs this RPC.
  * \param name
  *      Name of the desired table (NULL-terminated string).
- * \param (optional) pto
- *      A pointer to a TimedOpInfo struct with the max time to wait before
- *      canceling the RPC, in milliseconds.  On output, has the status of
- *      the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
  */
 GetTableIdTimedRpc::GetTableIdTimedRpc(RamCloud* ramcloud,
-        const char* name, TimedOpInfo* pto)
+        const char* name) 
     : CoordinatorRpcWrapper(ramcloud->clientContext,
-            sizeof(WireFormat::GetTableId::Response)),
-      waitInfo(pto)
+            sizeof(WireFormat::GetTableId::Response))
 {
     uint32_t length = downCast<uint32_t>(strlen(name) + 1);
     WireFormat::GetTableId::Request* reqHdr(
@@ -464,7 +451,12 @@ GetTableIdTimedRpc::GetTableIdTimedRpc(RamCloud* ramcloud,
 
 /**
  * Wait for a GetTableIdTimedRpc RPC to complete, and return the same results as
- * #RamCloud::GetTableIdTimed.
+ * #RamCloudTimed::GetTableIdTimed.
+ *
+ * \param msec
+ *      Max time to wait before canceling the RPC, in milliseconds.
+ * \param pStatus
+ *      On output, has the status of the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
  *
  * \return
  *      The return value is an identifier for the table.
@@ -472,9 +464,9 @@ GetTableIdTimedRpc::GetTableIdTimedRpc(RamCloud* ramcloud,
  * \exception TableDoesntExistException
  */
 uint64_t
-GetTableIdTimedRpc::wait()
+GetTableIdTimedRpc::wait(uint64_t msec, Status* pStatus)
 {
-    uint64_t abortTime = Cycles::rdtsc() + Cycles::fromMilliseconds(waitInfo->msec);
+    uint64_t abortTime = Cycles::rdtsc() + Cycles::fromMilliseconds(msec);
     bool respValid     = waitInternal(context->dispatch, abortTime);
 
     if (respValid)
@@ -483,13 +475,13 @@ GetTableIdTimedRpc::wait()
                 getResponseHeader<WireFormat::GetTableId>());
         if (respHdr->common.status != STATUS_OK)
             ClientException::throwException(HERE, respHdr->common.status);
-        waitInfo->status = STATUS_OK;
+        *pStatus = STATUS_OK;
         return respHdr->tableId;
     }
     else
     {
         cancel();
-        waitInfo->status = STATUS_TIMEOUT;
+        *pStatus = STATUS_TIMEOUT;
         return 0ULL;
     }
 }
