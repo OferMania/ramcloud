@@ -54,7 +54,7 @@ namespace RAMCloud {
  */
 RamCloudTimed::RamCloudTimed(RamCloud* ramcloud)
     : ramcloud(ramcloud)
-    , status(STATUS_OK)
+    , status(STATUS_SERVER_NOT_UP)
 {
 }
 
@@ -141,9 +141,9 @@ CreateTableTimedRpc::wait(uint64_t msec, Status* pStatus)
     {
         const WireFormat::CreateTable::Response* respHdr(
                 getResponseHeader<WireFormat::CreateTable>());
+        *pStatus = respHdr->common.status;
         if (respHdr->common.status != STATUS_OK)
             ClientException::throwException(HERE, respHdr->common.status);
-        *pStatus = STATUS_OK;
         return respHdr->tableId;
     }
     else
@@ -368,6 +368,7 @@ EnumerateTableTimedRpc::wait(Buffer& state, uint64_t msec, Status* pStatus)
 
     if (respValid)
     {
+        *pStatus = responseHeader->status;
         if (responseHeader->status != STATUS_OK)
             ClientException::throwException(HERE, responseHeader->status);
 
@@ -392,7 +393,6 @@ EnumerateTableTimedRpc::wait(Buffer& state, uint64_t msec, Status* pStatus)
         response->truncateFront(sizeof(*respHdr));
         response->truncate(response->size() - respHdr->iteratorBytes);
 
-        *pStatus = STATUS_OK;
         return result;
     }
     else
@@ -473,9 +473,9 @@ GetTableIdTimedRpc::wait(uint64_t msec, Status* pStatus)
     {
         const WireFormat::GetTableId::Response* respHdr(
                 getResponseHeader<WireFormat::GetTableId>());
+        *pStatus = respHdr->common.status;
         if (respHdr->common.status != STATUS_OK)
             ClientException::throwException(HERE, respHdr->common.status);
-        *pStatus = STATUS_OK;
         return respHdr->tableId;
     }
     else
