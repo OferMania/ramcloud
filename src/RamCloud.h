@@ -78,7 +78,9 @@ static const RejectRules defaultRejectRules = {1, 0, 0, 0, 0};
  *
  * In multi-threaded clients there must be a separate RamCloud object for
  * each thread; as of 5/2012 these objects are not thread-safe.
+ *
  */
+
 class RamCloud {
   public:
     void coordSplitAndMigrateIndexlet(
@@ -92,7 +94,7 @@ class RamCloud {
     void echo(const char* serviceLocator, const void* message, uint32_t length,
          uint32_t echoLength, Buffer* reply = NULL);
     uint64_t enumerateTable(uint64_t tableId, bool keysOnly,
-         uint64_t tabletFirstHash, Buffer& state, Buffer& objects);
+            uint64_t tabletFirstHash, Buffer& state, Buffer& objects);
     void getLogMetrics(const char* serviceLocator,
             ProtoBuf::LogMetrics& logMetrics);
     ServerMetrics getMetrics(uint64_t tableId, const void* key,

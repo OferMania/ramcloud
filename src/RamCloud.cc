@@ -675,7 +675,7 @@ RamCloud::enumerateTable(uint64_t tableId, bool keysOnly,
         uint64_t tabletFirstHash, Buffer& state, Buffer& objects)
 {
     EnumerateTableRpc rpc(this, tableId, keysOnly,
-                            tabletFirstHash, state, objects);
+                          tabletFirstHash, state, objects);
     return rpc.wait(state);
 }
 
@@ -1190,8 +1190,7 @@ RamCloud::getTableId(const char* name)
  * \param name
  *      Name of the desired table (NULL-terminated string).
  */
-GetTableIdRpc::GetTableIdRpc(RamCloud* ramcloud,
-        const char* name)
+GetTableIdRpc::GetTableIdRpc(RamCloud* ramcloud, const char* name)
     : CoordinatorRpcWrapper(ramcloud->clientContext,
             sizeof(WireFormat::GetTableId::Response))
 {
@@ -2600,8 +2599,8 @@ RamCloud::getRuntimeOption(const char* option, Buffer* value)
 }
 
 /**
- * Constructor for SetRuntimeOptionRpc: initiates an RPC in the same way as
- * #RamCloud::dropTable and returns once the RPC has been initiated,
+ * Constructor for GetRuntimeOptionRpc: initiates an RPC in the same way as
+ * #RamCloud::getRuntimeOption and returns once the RPC has been initiated,
  * without waiting for it to complete.
  *
  * \param ramcloud
@@ -2748,7 +2747,7 @@ RamCloud::setRuntimeOption(const char* option, const char* value)
 
 /**
  * Constructor for SetRuntimeOptionRpc: initiates an RPC in the same way as
- * #RamCloud::dropTable, but returns once the RPC has been initiated,
+ * #RamCloud::setRunTimeOption, but returns once the RPC has been initiated,
  * without waiting for it to complete.
  *
  * \param ramcloud
