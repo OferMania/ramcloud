@@ -211,7 +211,7 @@ ZooStorage::getChildren(const char* name, vector<Object>* children)
                     // We didn't allocate a large enough buffer; resize the
                     // buffer and try again.
                     bufferSize = stat.dataLength;
-                    delete buffer;
+                    delete[] buffer;
                     buffer = new char[bufferSize];
                     continue;
                 }
@@ -222,11 +222,11 @@ ZooStorage::getChildren(const char* name, vector<Object>* children)
     }
     catch (...) {
         deallocate_String_vector(&names);
-        delete buffer;
+        delete[] buffer;
         throw;
     }
     deallocate_String_vector(&names);
-    delete buffer;
+    delete[] buffer;
 }
 
 // See documentation for ExternalStorage::remove.
