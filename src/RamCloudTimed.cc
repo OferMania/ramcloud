@@ -486,4 +486,458 @@ GetTableIdTimedRpc::wait(uint64_t msec, Status* pStatus)
     }
 }
 
+/**
+ * Read the current contents of an object.
+ *
+ * \param msec
+ *      Max time to wait before canceling the RPC, in milliseconds.
+ * \param tableId
+ *      The table containing the desired object (return value from
+ *      a previous call to getTableId).
+ * \param key
+ *      Variable length key that uniquely identifies the object within tableId.
+ *      It does not necessarily have to be null terminated.  The caller must
+ *      ensure that the storage for this key is unchanged through the life of
+ *      the RPC.
+ * \param keyLength
+ *      Size in bytes of the key.
+ * \param[out] value
+ *      After a successful return, this Buffer will hold the
+ *      contents of the desired object - only the value portion of the object.
+ * \param rejectRules
+ *      If non-NULL, specifies conditions under which the read
+ *      should be aborted with an error.
+ * \param[out] version
+ *      If non-NULL, the version number of the object is returned here.
+ * \param[out] objectExists
+ *      If non-NULL, the ObjectDoesntExistException is not thrown and a flag
+ *      indicating the existence of the object is returned here.
+ */
+void
+RamCloudTimed::read(uint64_t msec, uint64_t tableId, const void* key, uint16_t keyLength,
+        Buffer* value, const RejectRules* rejectRules, uint64_t* version,
+        bool* objectExists)
+{
+    ReadTimedRpc rpc(ramcloud, tableId, key, keyLength, value, rejectRules);
+    rpc.wait(msec, &status, version, objectExists);
+}
+
+/**
+ * Constructor for ReadTimedRpc: initiates an RPC in the same way as
+ * #RamCloudTimed::read, but returns once the RPC has been initiated, without
+ * waiting for it to complete.
+ *
+ * \param ramcloud
+ *      The RAMCloud object that governs this RPC.
+ * \param tableId
+ *      The table containing the desired object (return value from
+ *      a previous call to getTableId).
+ * \param key
+ *      Variable length key that uniquely identifies the object within tableId.
+ *      It does not necessarily have to be null terminated.  The caller must
+ *      ensure that the storage for this key is unchanged through the life of
+ *      the RPC.
+ * \param keyLength
+ *      Size in bytes of the key.
+ * \param[out] value
+ *      After a successful return, this Buffer will hold the
+ *      contents of the desired object.
+ * \param rejectRules
+ *      If non-NULL, specifies conditions under which the read
+ *      should be aborted with an error.
+ */
+ReadTimedRpc::ReadTimedRpc(RamCloud* ramcloud, uint64_t tableId,
+        const void* key, uint16_t keyLength, Buffer* value,
+        const RejectRules* rejectRules)
+    : ObjectRpcWrapper(ramcloud->clientContext, tableId, key, keyLength,
+            sizeof(WireFormat::Read::Response), value)
+{
+    value->reset();
+    WireFormat::Read::Request* reqHdr(allocHeader<WireFormat::Read>());
+    reqHdr->tableId = tableId;
+    reqHdr->keyLength = keyLength;
+    reqHdr->rejectRules = rejectRules ? *rejectRules : defaultRejectRules;
+    request.append(key, keyLength);
+    send();
+}
+
+/**
+ * Wait for the RPC to complete, and return the same results as
+ * #RamCloudTimed::read.
+ *
+ * \param msec
+ *      Max time to wait before canceling the RPC, in milliseconds.
+ * \param[out] pStatus
+ *      The status of the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
+ * \param[out] version
+ *      If non-NULL, the version number of the object is returned here.
+ * \param[out] objectExists
+ *      If non-NULL, the ObjectDoesntExistException is not thrown and a flag
+ *      indicating the existence of the object is returned here.
+ */
+void
+ReadTimedRpc::wait(uint64_t msec, Status* pStatus, uint64_t* version, bool* objectExists)
+{
+    if (objectExists != NULL)
+        *objectExists = true;
+
+    uint64_t abortTime = Cycles::rdtsc() + Cycles::fromMilliseconds(msec);
+    bool respValid     = waitInternal(context->dispatch, abortTime);
+
+    if (respValid) {
+        const WireFormat::Read::Response* respHdr(
+                getResponseHeader<WireFormat::Read>());
+        *pStatus = respHdr->common.status;
+        if (version != NULL)
+            *version = respHdr->version;
+
+        if (respHdr->common.status != STATUS_OK) {
+            if (objectExists != NULL &&
+                    respHdr->common.status == STATUS_OBJECT_DOESNT_EXIST) {
+                *objectExists = false;
+            } else {
+                ClientException::throwException(HERE, respHdr->common.status);
+            }
+        }
+
+        // Truncate the response Buffer so that it consists of nothing
+        // but the object data.
+        response->truncateFront(sizeof(*respHdr));
+        assert(respHdr->length == response->size());
+    } else {
+        cancel();
+        *pStatus = STATUS_TIMEOUT;
+    }
+}
+
+/**
+ * Replace the value of a given object, or create a new object if none
+ * previously existed.
+ *
+ * \param msec
+ *      Max time to wait before canceling the RPC, in milliseconds.
+ * \param tableId
+ *      The table containing the desired object (return value from
+ *      a previous call to getTableId).
+ * \param key
+ *      Variable length key that uniquely identifies the object within tableId.
+ *      It does not necessarily have to be null terminated.  The caller must
+ *      ensure that the storage for this key is unchanged through the life of
+ *      the RPC.
+ * \param keyLength
+ *      Size in bytes of the key.
+ * \param buf
+ *      Address of the first byte of the new contents for the object;
+ *      must contain at least length bytes.
+ * \param length
+ *      Size in bytes of the new contents for the object.
+ * \param rejectRules
+ *      If non-NULL, specifies conditions under which the write
+ *      should be aborted with an error.
+ * \param[out] version
+ *      If non-NULL, the version number of the object is returned here.
+ *      If the operation was successful this will be the new version for
+ *      the object. If the operation failed then the version number returned
+ *      is the current version of the object, or 0 if the object does not
+ *      exist.
+ * \param async
+ *      If true, the new object will not be immediately replicated to backups.
+ *      Data loss may occur!
+ *
+ * \exception RejectRulesException
+ */
+void
+RamCloudTimed::write(uint64_t msec, uint64_t tableId, const void* key, uint16_t keyLength,
+        const void* buf, uint32_t length, const RejectRules* rejectRules,
+        uint64_t* version, bool async)
+{
+    WriteTimedRpc rpc(ramcloud, tableId, key, keyLength, buf, length, rejectRules,
+            async);
+    rpc.wait(msec, &status, version);
+}
+
+/**
+ * Constructor for WriteTimedRpc: initiates an RPC in the same way as
+ * #RamCloudTimed::write, but returns once the RPC has been initiated, without
+ * waiting for it to complete. This for the constructor is used when only
+ * the primary key is being specified.
+ *
+ * \param ramcloud
+ *      The RAMCloud object that governs this RPC.
+ * \param tableId
+ *      The table containing the desired object (return value from
+ *      a previous call to getTableId).
+ * \param key
+ *      Variable length key that uniquely identifies the object within tableId.
+ *      It does not necessarily have to be null terminated.  The caller must
+ *      ensure that the storage for this key is unchanged through the life of
+ *      the RPC.
+ * \param keyLength
+ *      Length of primary key in bytes
+ * \param buf
+ *      Address of the first byte of the new contents for the object;
+ *      must contain at least length bytes.
+ * \param length
+ *      Size in bytes of the new contents for the object.
+ * \param rejectRules
+ *      If non-NULL, specifies conditions under which the write
+ *      should be aborted with an error.
+ * \param async
+ *      If true, the new object will not be immediately replicated to backups.
+ *      Data loss may occur!
+ */
+WriteTimedRpc::WriteTimedRpc(RamCloud* ramcloud, uint64_t tableId,
+        const void* key, uint16_t keyLength, const void* buf, uint32_t length,
+        const RejectRules* rejectRules, bool async)
+    : LinearizableObjectRpcWrapper(ramcloud, true, tableId, key,
+            keyLength, sizeof(WireFormat::Write::Response))
+{
+    WireFormat::Write::Request* reqHdr(allocHeader<WireFormat::Write>());
+    reqHdr->tableId = tableId;
+
+    uint32_t totalLength = 0;
+    uint16_t currentKeyLength = 0;
+    if (keyLength)
+        currentKeyLength = keyLength;
+    else
+        currentKeyLength = static_cast<uint16_t>(strlen(
+                               static_cast<const char *>(key)));
+
+    Key primaryKey(tableId, key, currentKeyLength);
+    Object::appendKeysAndValueToBuffer(primaryKey, buf, length,
+                                       &request, false, &totalLength);
+
+    reqHdr->rejectRules = rejectRules ? *rejectRules : defaultRejectRules;
+    reqHdr->async = async;
+    reqHdr->length = totalLength;
+
+    fillLinearizabilityHeader<WireFormat::Write::Request>(reqHdr);
+
+    send();
+}
+
+/**
+ * Wait for a write RPC to complete, and return the same results as
+ * #RamCloudTimed::write.
+ *
+ * \param msec
+ *      Max time to wait before canceling the RPC, in milliseconds.
+ * \param[out] pStatus
+ *      The status of the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
+ * \param[out] version
+ *      If non-NULL, the current version number of the object is
+ *      returned here.
+ */
+void
+WriteTimedRpc::wait(uint64_t msec, Status* pStatus, uint64_t* version)
+{
+    uint64_t abortTime = Cycles::rdtsc() + Cycles::fromMilliseconds(msec);
+    bool respValid     = waitInternal(context->dispatch, abortTime);
+
+    if (respValid) {
+        const WireFormat::Write::Response* respHdr(
+                getResponseHeader<WireFormat::Write>());
+        *pStatus = respHdr->common.status;
+        if (version != NULL)
+            *version = respHdr->version;
+
+        if (respHdr->common.status != STATUS_OK)
+            ClientException::throwException(HERE, respHdr->common.status);
+    } else {
+        cancel();
+        *pStatus = STATUS_TIMEOUT;
+    }
+}
+
+/**
+ * Delete an object from a table. If the object does not currently exist
+ * then the operation succeeds without doing anything (unless rejectRules
+ * causes the operation to be aborted).
+ *
+ * \param msec
+ *      Max time to wait before canceling the RPC, in milliseconds.
+ * \param tableId
+ *      The table containing the object to be deleted (return value from
+ *      a previous call to getTableId).
+ * \param key
+ *      Variable length key that uniquely identifies the object within tableId.
+ *      It does not necessarily have to be null terminated.  The caller must
+ *      ensure that the storage for this key is unchanged through the life of
+ *      the RPC.
+ * \param keyLength
+ *      Size in bytes of the key.
+ * \param rejectRules
+ *      If non-NULL, specifies conditions under which the delete
+ *      should be aborted with an error.
+ * \param[out] version
+ *      If non-NULL, the version number of the object (just before
+ *      deletion) is returned here.
+ */
+void
+RamCloudTimed::remove(uint64_t msec, uint64_t tableId, const void* key, uint16_t keyLength,
+        const RejectRules* rejectRules, uint64_t* version)
+{
+    RemoveTimedRpc rpc(ramcloud, tableId, key, keyLength, rejectRules);
+    rpc.wait(msec, &status, version);
+}
+
+/**
+ * Constructor for RemoveTimedRpc: initiates an RPC in the same way as
+ * #RamCloudTimed::remove, but returns once the RPC has been initiated, without
+ * waiting for it to complete.
+ *
+ * \param ramcloud
+ *      The RAMCloud object that governs this RPC.
+ * \param tableId
+ *      The table containing the object to be deleted (return value from
+ *      a previous call to getTableId).
+ * \param key
+ *      Variable length key that uniquely identifies the object within tableId.
+ *      It does not necessarily have to be null terminated.  The caller must
+ *      ensure that the storage for this key is unchanged through the life of
+ *      the RPC.
+ * \param keyLength
+ *      Size in bytes of the key.
+ * \param rejectRules
+ *      If non-NULL, specifies conditions under which the delete
+ *      should be aborted with an error.
+ */
+RemoveTimedRpc::RemoveTimedRpc(RamCloud* ramcloud, uint64_t tableId,
+        const void* key, uint16_t keyLength, const RejectRules* rejectRules)
+    : LinearizableObjectRpcWrapper(ramcloud, true, tableId, key, keyLength,
+            sizeof(WireFormat::Remove::Response))
+{
+    WireFormat::Remove::Request* reqHdr(allocHeader<WireFormat::Remove>());
+    reqHdr->tableId = tableId;
+    reqHdr->keyLength = keyLength;
+    reqHdr->rejectRules = rejectRules ? *rejectRules : defaultRejectRules;
+    request.append(key, keyLength);
+    fillLinearizabilityHeader<WireFormat::Remove::Request>(reqHdr);
+    send();
+}
+
+/**
+ * Wait for a remove RPC to complete, and return the same results as
+ * #RamCloudTimed::remove.
+ *
+ * \param msec
+ *      Max time to wait before canceling the RPC, in milliseconds.
+ * \param[out] pStatus
+ *      The status of the RPC, likely either STATUS_OK or STATUS_TIMEOUT.
+ * \param[out] version
+ *      If non-NULL, the version number of the object (just before
+ *      deletion) is returned here.
+ */
+void
+RemoveTimedRpc::wait(uint64_t msec, Status* pStatus, uint64_t* version)
+{
+    uint64_t abortTime = Cycles::rdtsc() + Cycles::fromMilliseconds(msec);
+    bool respValid     = waitInternal(context->dispatch, abortTime);
+
+    if (respValid) {
+        const WireFormat::Remove::Response* respHdr(
+                getResponseHeader<WireFormat::Remove>());
+        *pStatus = respHdr->common.status;
+        if (version != NULL)
+            *version = respHdr->version;
+
+        if (respHdr->common.status != STATUS_OK)
+            ClientException::throwException(HERE, respHdr->common.status);
+    } else {
+        cancel();
+        *pStatus = STATUS_TIMEOUT;
+    }
+}
+
+/**
+ * Read the current contents of multiple objects. This method has two
+ * performance advantages over calling RamCloudTimed::read separately for
+ * each object:
+ * - If multiple objects are stored on a single server, this method
+ *   issues a single RPC to fetch all of them at once.
+ * - If different objects are stored on different servers, this method
+ *   issues multiple RPCs concurrently.
+ *
+ * \param msec
+ *      Max time to wait before canceling the RPC, in milliseconds.
+ * \param requests
+ *      Each element in this array describes one object to read, and where
+ *      to place its value.
+ * \param numRequests
+ *      Number of valid entries in \c requests.
+ */
+void
+RamCloudTimed::multiRead(uint64_t msec, MultiReadObject* requests[], uint32_t numRequests)
+{
+    uint64_t abortTime = Cycles::rdtsc() + Cycles::fromMilliseconds(msec);
+    MultiRead request(ramcloud, requests, numRequests);
+    bool respValid = request.waitUntil(abortTime);
+    if (respValid) {
+        status = STATUS_OK;
+    } else {
+        request.cancel();
+        status = STATUS_TIMEOUT;
+    }
+}
+
+/**
+ * Remove multiple objects.
+ * This method has two performance advantages over calling RamCloudTimed::remove
+ * separately for each object:
+ * - If multiple objects are stored on a single server, this method
+ *   issues a single RPC to fetch all of them at once.
+ * - If different objects are stored on different servers, this method
+ *   issues multiple RPCs concurrently.
+ *
+ * \param msec
+ *      Max time to wait before canceling the RPC, in milliseconds.
+ * \param requests
+ *      Each element in this array describes one object to remove.
+ * \param numRequests
+ *      Number of valid entries in \c requests.
+ */
+void
+RamCloudTimed::multiRemove(uint64_t msec, MultiRemoveObject* requests[], uint32_t numRequests)
+{
+    uint64_t abortTime = Cycles::rdtsc() + Cycles::fromMilliseconds(msec);
+    MultiRemove request(ramcloud, requests, numRequests);
+    bool respValid = request.waitUntil(abortTime);
+    if (respValid) {
+        status = STATUS_OK;
+    } else {
+        request.cancel();
+        status = STATUS_TIMEOUT;
+    }
+}
+
+/**
+ * Write multiple objects. This method has two performance advantages over
+ * calling RamCloudTimed::write separately for each object:
+ * - If multiple objects belong on a single server, this method
+ *   issues a single RPC to write all of them at once.
+ * - If different objects belong to different servers, this method
+ *   issues multiple RPCs concurrently.
+ *
+ * \param msec
+ *      Max time to wait before canceling the RPC, in milliseconds.
+ * \param requests
+ *      Each element in this array describes one object to write. The write
+ *      operation's status and the object version are also returned here.
+ * \param numRequests
+ *      Number of valid entries in \c requests.
+ */
+void
+RamCloudTimed::multiWrite(uint64_t msec, MultiWriteObject* requests[], uint32_t numRequests)
+{
+    uint64_t abortTime = Cycles::rdtsc() + Cycles::fromMilliseconds(msec);
+    MultiWrite request(ramcloud, requests, numRequests);
+    bool respValid = request.waitUntil(abortTime);
+    if (respValid) {
+        status = STATUS_OK;
+    } else {
+        request.cancel();
+        status = STATUS_TIMEOUT;
+    }
+}
+
 }  // namespace RAMCloud
