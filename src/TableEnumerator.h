@@ -17,6 +17,7 @@
 #define RAMCLOUD_TABLEENUMERATOR_H
 
 #include "RamCloud.h"
+#include "RamCloudTimed.h"
 #include "Object.h"
 
 namespace RAMCloud {
@@ -29,16 +30,24 @@ namespace RAMCloud {
 class TableEnumerator {
   public:
     TableEnumerator(RamCloud& ramCloud, uint64_t tableId, bool keysOnly);
+    TableEnumerator(RamCloudTimed* ramcloudTimed, uint64_t msec, uint64_t tableId, bool keysOnly);
     bool hasNext();
     void next(uint32_t* size, const void** object);
     void nextObjectBlob(Buffer** buffer);
     void nextKeyAndData(uint32_t* keyLength, const void** key,
                         uint32_t* dataLength, const void** data);
+    Status getStatus();
   private:
     void requestMoreObjects();
 
-    /// The RamCloud master object.
-    RamCloud& ramcloud;
+    /// The RamCloud master object. When this is non-null, it is how we invoke enumerate RPC's
+    RamCloud* ramcloud;
+
+    /// The RamCloudTimed object. When this is non-null, it is how we invoke enumerate RPC's
+    RamCloudTimed* ramcloudTimed;
+
+    /// When ramcloudTimed is non-null, this is for how long (in milliseconds) to wait for each enumeration
+    uint64_t msec;
 
     /// The table containing the tablet being enumerated.
     uint64_t tableId;
@@ -65,6 +74,10 @@ class TableEnumerator {
 
     /// The next offset to read within the objects buffer.
     uint32_t nextOffset;
+
+    /// When ramcloudTimed is null, this is set to STATUS_OK. When ramcloudTimed is non-null, this indicates
+    /// statuses like timeout issues for the caller of TableEnumerator API's (via getStatus())
+    Status status;
 
     DISALLOW_COPY_AND_ASSIGN(TableEnumerator);
 };
