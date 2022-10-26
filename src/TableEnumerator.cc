@@ -15,6 +15,7 @@
 
 #include "TableEnumerator.h"
 #include "ShortMacros.h"
+#include "Logger.h"
 
 namespace RAMCloud {
 
@@ -35,7 +36,9 @@ namespace RAMCloud {
 TableEnumerator::TableEnumerator(RamCloud& ramcloud,
                                 uint64_t tableId,
                                 bool keysOnly)
-    : ramcloud(ramcloud)
+    : ramcloud(&ramcloud)
+    , ramcloudTimed(NULL)
+    , msec(0)
     , tableId(tableId)
     , keysOnly(keysOnly)
     , tabletStartHash(0)
@@ -43,6 +46,43 @@ TableEnumerator::TableEnumerator(RamCloud& ramcloud,
     , state()
     , objects()
     , nextOffset(0)
+    , status(STATUS_OK)
+{
+}
+
+/**
+ * Constructor for TableEnumerator objects when you want to enumerate where
+ * there is at most an msec time-limit on each individual enumerate RPC call.
+ *
+ * \param ramcloudTimed
+ *      Overall information about the RAMCloud cluster to use for this
+ *      enumeration.
+ * \param msec
+ *      The maximum time (in milliseconds) to wait on each individual
+ *      enumerate RPC call.
+ * \param tableId
+ *      Identifier for the table to enumerate.
+ * \param keysOnly
+ *      False means that full objects are returned, containing both keys
+ *      and data. True means that the returned objects have
+ *      been truncated so that the object data (normally the last
+ *      field of the object) is omitted.
+ */
+TableEnumerator::TableEnumerator(RamCloudTimed* ramcloudTimed,
+                                uint64_t msec,
+                                uint64_t tableId,
+                                bool keysOnly)
+    : ramcloud(NULL)
+    , ramcloudTimed(ramcloudTimed)
+    , msec(msec)
+    , tableId(tableId)
+    , keysOnly(keysOnly)
+    , tabletStartHash(0)
+    , done(false)
+    , state()
+    , objects()
+    , nextOffset(0)
+    , status(STATUS_OK)
 {
 }
 
@@ -171,6 +211,17 @@ TableEnumerator::nextKeyAndData(uint32_t* keyLength, const void** key,
 }
 
 /**
+ * Retrieved the status of the most recent enumerate RPC attempt. This
+ * allows the caller of the TableEnumerator instance to know if there
+ * was a timeout in rc-server.
+ */
+Status
+TableEnumerator::getStatus()
+{
+    return status;
+}
+
+/**
  * Used internally by #hasNext() and #next() to retrieve objects. Will
  * set the #done field if enumeration is complete. Otherwise the
  * #objects Buffer will contain at least one object.
@@ -182,8 +233,24 @@ TableEnumerator::requestMoreObjects()
 
     nextOffset = 0;
     while (true) {
-        tabletStartHash = ramcloud.enumerateTable(tableId, keysOnly,
-                                            tabletStartHash, state, objects);
+        if (ramcloudTimed) {
+            tabletStartHash = ramcloudTimed->enumerateTable(tableId, keysOnly,
+                                                       tabletStartHash, state, objects, msec);
+            status = ramcloudTimed->getStatus();
+        } else {
+            tabletStartHash = ramcloud->enumerateTable(tableId, keysOnly,
+                                                       tabletStartHash, state, objects);
+        }
+
+        // Status only changes for ramcloudTimed, which puts a time-limit on enum calls.
+        // If something went wrong on the time-limit call, then we are effectively done
+        // enumerating immediately.
+        if (status != STATUS_OK) {
+            done = true;
+            LOG(WARNING, "Got status %d when invoking enumerateTable for tableId %llu", status, tableId);
+            return;
+        }
+
         if (objects.size() > 0) {
             return;
         }
