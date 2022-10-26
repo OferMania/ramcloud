@@ -64,6 +64,7 @@ class MultiOp {
     void cancel();
     bool isReady();
     void wait();
+    bool waitUntil(uint64_t abortTime);
 
   PROTECTED:
     MultiOp(RamCloud* ramcloud,  WireFormat::MultiOp::OpType type,

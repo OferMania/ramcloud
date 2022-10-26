@@ -66,6 +66,42 @@ class RamCloudTimed {
             uint64_t msec);
     uint64_t getTableId(const char* name, uint64_t msec);
 
+    // IMPORTANT: Only single-key objects are supported at the moment in RamCloudTimed
+    // across singular/batched updates. This applies to the operations read, write,
+    // remove, multiRead, multiWrite, and multiRemove. Note that a singular multi-key
+    // write() call is DIFFERENT from a multiWrite() batch call on objects where each
+    // object is single-key. The main hurdle for multi-key objects is verification of
+    // correctness under reject-rules. Once that's tested & verified, we can start
+    // supporting multi-key objects in RamCloudTimed
+    //
+    // IMPORTANT: For batch calls (multiRead, multiWrite, multiRemove), two types of
+    // statuses get outputted. (1) There is the status for the entire batch (typically
+    // STATUS_OK or STATUS_TIMEOUT) accessible by calling getStatus() AFTER the batch
+    // call. (2) Each individual read/write/remove in a batch has its own status, and
+    // when status for entire batch is STATUS_OK, you can find individual statuses within
+    // the status attribute of the individual MultiReadObject, MutiWriteObject, or
+    // MultiRemoveObject AFTER the batch call.
+    //
+    // IMPORTANT: No zero-termination is assumed for any keys and values supported in
+    // RamCloudTimed, ie caller always supplies sizes for keys and values, and in
+    // the case of read or multiRead, the length of the value(s) is always given via
+    // accessor methods on the outputted Buffer or Object. This implies embedded zero
+    // characters are allowed for keys and values, and any size n specified for a key
+    // or value implies that indices within [0, n-1] correspond to valid memory.
+
+    void read(uint64_t msec, uint64_t tableId, const void* key, uint16_t keyLength,
+            Buffer* value, const RejectRules* rejectRules = NULL,
+            uint64_t* version = NULL, bool* objectExists = NULL);
+    void write(uint64_t msec, uint64_t tableId, const void* key, uint16_t keyLength,
+            const void* buf, uint32_t length,
+            const RejectRules* rejectRules = NULL, uint64_t* version = NULL,
+            bool async = false);
+    void remove(uint64_t msec, uint64_t tableId, const void* key, uint16_t keyLength,
+            const RejectRules* rejectRules = NULL, uint64_t* version = NULL);
+    void multiRead(uint64_t msec, MultiReadObject* requests[], uint32_t numRequests);
+    void multiWrite(uint64_t msec, MultiWriteObject* requests[], uint32_t numRequests);
+    void multiRemove(uint64_t msec, MultiRemoveObject* requests[], uint32_t numRequests);
+
     void poll();
     explicit RamCloudTimed(RamCloud* ramcloud);
     virtual ~RamCloudTimed();
@@ -139,6 +175,53 @@ class GetTableIdTimedRpc : public CoordinatorRpcWrapper {
 
   PRIVATE:
     DISALLOW_COPY_AND_ASSIGN(GetTableIdTimedRpc);
+};
+
+/**
+ * Encapsulates the state of a RamCloudTimed::read operation,
+ * allowing it to execute asynchronously.
+ */
+class ReadTimedRpc : public ObjectRpcWrapper {
+  public:
+    ReadTimedRpc(RamCloud* ramcloud, uint64_t tableId, const void* key,
+            uint16_t keyLength, Buffer* value,
+            const RejectRules* rejectRules = NULL);
+    ~ReadTimedRpc() {}
+    void wait(uint64_t msec, Status* pStatus, uint64_t* version = NULL, bool* objectExists = NULL);
+
+  PRIVATE:
+    DISALLOW_COPY_AND_ASSIGN(ReadTimedRpc);
+};
+
+/**
+ * Encapsulates the state of a RamCloudTimed::remove operation,
+ * allowing it to execute asynchronously.
+ */
+class RemoveTimedRpc : public LinearizableObjectRpcWrapper {
+  public:
+    RemoveTimedRpc(RamCloud* ramcloud, uint64_t tableId, const void* key,
+            uint16_t keyLength, const RejectRules* rejectRules = NULL);
+    ~RemoveTimedRpc() {}
+    void wait(uint64_t msec, Status* pStatus, uint64_t* version = NULL);
+
+  PRIVATE:
+    DISALLOW_COPY_AND_ASSIGN(RemoveTimedRpc);
+};
+
+/**
+ * Encapsulates the state of a RamCloudTimed::write operation,
+ * allowing it to execute asynchronously.
+ */
+class WriteTimedRpc : public LinearizableObjectRpcWrapper {
+  public:
+    WriteTimedRpc(RamCloud* ramcloud, uint64_t tableId, const void* key,
+            uint16_t keyLength, const void* buf, uint32_t length,
+            const RejectRules* rejectRules = NULL, bool async = false);
+    ~WriteTimedRpc() {}
+    void wait(uint64_t msec, Status* pStatus, uint64_t* version = NULL);
+
+  PRIVATE:
+    DISALLOW_COPY_AND_ASSIGN(WriteTimedRpc);
 };
 
 } // namespace RAMCloud

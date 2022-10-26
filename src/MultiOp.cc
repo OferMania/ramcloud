@@ -434,6 +434,38 @@ MultiOp::wait()
 }
 
 /**
+ * Wait until at latest the specified abortTime for the MultiOp operation
+ * to complete. Returns true if MultiOp completed or failed by abortTime or
+ * sooner, false if abortTime passed without a response. If you don't want
+ * to wait indefinitely on a MultiOp to finish, then this is your API! Just
+ * remember to call cancel() if waitUntil() returns false.
+ */
+bool
+MultiOp::waitUntil(uint64_t abortTime)
+{
+    // When invoked in RAMCloud servers there is a separate dispatch thread,
+    // so we just busy-wait here. When invoked on RAMCloud clients we're in
+    // the dispatch thread so we have to invoke the dispatcher while waiting.
+    bool isDispatchThread =
+            ramcloud->clientContext->dispatch->isDispatchThread();
+
+    while (true) {
+        if (canceled) {
+            throw RpcCanceledException(HERE);
+        }
+        if (isReady()) {
+            return true;
+        }
+        if (isDispatchThread) {
+            ramcloud->clientContext->dispatch->poll();
+        }
+        if (ramcloud->clientContext->dispatch->currentTime > abortTime) {
+            return false;
+        }
+    }
+}
+
+/**
  * Constructor for PartRpc objects.
  *
  * \param ramcloud
