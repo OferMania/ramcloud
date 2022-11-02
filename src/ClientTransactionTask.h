@@ -85,6 +85,7 @@ class ClientTransactionTask : public RpcTracker::TrackedRpc {
                 (state == DECISION && nextCacheEntry == commitCache.end()));
     }
     void performTask();
+    void cancelTask();
 
   PRIVATE:
     // Forward declaration of RPCs
@@ -115,7 +116,8 @@ class ClientTransactionTask : public RpcTracker::TrackedRpc {
     enum State { INIT,      /// Acquire and assign LeaseIds and RpcIds.
                  PREPARE,   /// Send out PrepareRpcs and collect votes.
                  DECISION,  /// Send out DecisionRpcs based on votes.
-                 DONE       /// Execution has terminated (w/ or w/o errors).
+                 DONE,      /// Execution has terminated (w/ or w/o errors).
+                 CANCEL     /// Execution was canceled, typically due to taking too long
             } state;
 
     /// This transaction's decision to either COMMIT or ABORT.

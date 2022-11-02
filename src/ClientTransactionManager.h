@@ -44,6 +44,7 @@ class ClientTransactionManager {
     ClientTransactionManager();
     void poll();
     void startTransactionTask(std::shared_ptr<ClientTransactionTask>& taskPtr);
+    void cancelTransactionTask(std::shared_ptr<ClientTransactionTask>& taskPtr);
 
   PRIVATE:
     std::list< std::shared_ptr<ClientTransactionTask> > taskList;
