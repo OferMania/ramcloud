@@ -61,5 +61,27 @@ ClientTransactionManager::startTransactionTask(
     taskList.push_back(taskPtr);
 }
 
+/**
+ * Cancels the transaction task without finishing it if it is running under the manager.
+ * This is a no-op if taskPtr is not being tracked by the manager.
+ *
+ * \param taskPtr
+ *      Reference to a shared pointer to the task we want canceled.
+ */
+void
+ClientTransactionManager::cancelTransactionTask(std::shared_ptr<ClientTransactionTask>& taskPtr)
+{
+    auto it = std::find(taskList.begin(), taskList.end(), taskPtr);
+    if (it == taskList.end()) {
+        // Not an error. We simply don't cancel a task that's not currently running
+        return;
+    }
+
+    // Erase the item from our list to avoid accidental performTask() invocations
+    taskList.erase(it);
+
+    // cancel the task
+    taskPtr->cancelTask();
+}
 
 } // end RAMCloud

@@ -119,6 +119,10 @@ ClientTransactionTask::insertCacheEntry(Key& key, const void* buf,
 void
 ClientTransactionTask::performTask()
 {
+    if (state == CANCEL) {
+        RAMCLOUD_LOG(ERROR, "Cannot perform on canceled transaction task id %lu", txId);
+        return;
+    }
     try {
         if (state == INIT) {
             startTime = Cycles::rdtsc();
@@ -216,6 +220,38 @@ ClientTransactionTask::performTask()
         ramcloud->rpcTracker->rpcFinished(txId);
         state = DONE;
     }
+}
+
+void
+ClientTransactionTask::cancelTask()
+{
+    state = CANCEL;
+
+    // cancel all unfinished prepare rpc's
+    for (auto it = prepareRpcs.begin(); it != prepareRpcs.end(); ++it) {
+        PrepareRpc* rpc = &(*it);
+        if (!rpc->isReady()) {
+            rpc->cancel();
+        }
+    }
+
+    // cancel all unfinished decision rpc's
+    for (auto it = decisionRpcs.begin(); it != decisionRpcs.end(); ++it) {
+        DecisionRpc* rpc = &(*it);
+        if (!rpc->isReady()) {
+            rpc->cancel();
+        }
+    }
+
+    // clear out all rpc's
+    prepareRpcs.clear();
+    decisionRpcs.clear();
+
+    RAMCLOUD_LOG(WARNING, "Transaction %lu was canceled, possibly due to taking too long.",
+                        txId);
+
+    // stop generating client sessions alerts on this transaction
+    ramcloud->rpcTracker->rpcFinished(txId);
 }
 
 /**
@@ -510,9 +546,13 @@ ClientTransactionTask::sendPrepareRpc()
 bool ClientTransactionTask::tryFinish()
 {
     // When state is INIT, invoking performTask() from RpcTracker creates an infinite recursion. We
-    // guard against that here by not allowing the RPC task to advance
+    // guard against that here by not allowing the RPC task to advance. We also don't want
+    // performTask() invoked if state is CANCEL, as that typically indicates a timeout.
     if (state == INIT) {
         RAMCLOUD_LOG(WARNING, "Attempted tryFinish() when state is INIT");
+        return false;
+    } else if (state == CANCEL) {
+        RAMCLOUD_LOG(ERROR, "Attempted tryFinish() when state is CANCEL");
         return false;
     }
 

@@ -16,6 +16,7 @@
 #include "ClientTransactionManager.h"
 #include "ClientTransactionTask.h"
 #include "ClientException.h"
+#include "Cycles.h"
 #include "Transaction.h"
 
 namespace RAMCloud {
@@ -31,6 +32,7 @@ Transaction::Transaction(RamCloud* ramcloud)
     , taskPtr(new ClientTransactionTask(ramcloud))
     , commitStarted(false)
     , nextReadBatchPtr()
+    , canceled(false)
 {
 }
 
@@ -48,12 +50,16 @@ Transaction::commit()
 {
     ClientTransactionTask* task = taskPtr.get();
 
-    if (!commitStarted) {
+    if (!commitStarted && !canceled) {
         commitStarted = true;
         ramcloud->transactionManager->startTransactionTask(taskPtr);
     }
 
     while (!task->allDecisionsSent()) {
+        if (canceled) {
+            cancel();
+            throw RpcCanceledException(HERE);
+        }
         ramcloud->transactionManager->poll();
         ramcloud->poll();
     }
@@ -78,12 +84,16 @@ Transaction::sync()
 {
     ClientTransactionTask* task = taskPtr.get();
 
-    if (!commitStarted) {
+    if (!commitStarted && !canceled) {
         commitStarted = true;
         ramcloud->transactionManager->startTransactionTask(taskPtr);
     }
 
     while (!task->isReady()) {
+        if (canceled) {
+            cancel();
+            throw RpcCanceledException(HERE);
+        }
         ramcloud->transactionManager->poll();
         ramcloud->poll();
     }
@@ -104,13 +114,48 @@ Transaction::commitAndSync()
     return commit();
 }
 
-void
-Transaction::commitAsync()
+bool
+Transaction::commitAndSyncWithTimeout(uint64_t timeout_ms)
 {
-    if (!commitStarted) {
+    ClientTransactionTask* task = taskPtr.get();
+    uint64_t abortTime = Cycles::rdtsc() + Cycles::fromMilliseconds(timeout_ms);
+
+    if (!commitStarted && !canceled) {
         commitStarted = true;
         ramcloud->transactionManager->startTransactionTask(taskPtr);
     }
+
+    while (!task->allDecisionsSent() || !task->isReady()) {
+        if (ramcloud->clientContext->dispatch->currentTime > abortTime || canceled) {
+            cancel();
+            return false;
+        }
+        ramcloud->transactionManager->poll();
+        ramcloud->poll();
+    }
+
+    if (expect_false(task->getDecision() ==
+            WireFormat::TxDecision::UNDECIDED)) {
+        ClientException::throwException(HERE, STATUS_INTERNAL_ERROR);
+    }
+
+    return (task->getDecision() == WireFormat::TxDecision::COMMIT);
+}
+
+void
+Transaction::commitAsync()
+{
+    if (!commitStarted && !canceled) {
+        commitStarted = true;
+        ramcloud->transactionManager->startTransactionTask(taskPtr);
+    }
+}
+
+void
+Transaction::cancel()
+{
+    ramcloud->transactionManager->cancelTransactionTask(taskPtr);
+    canceled = true;
 }
 
 bool
@@ -189,7 +234,7 @@ Transaction::read(uint64_t tableId, const void* key, uint16_t keyLength,
 void
 Transaction::remove(uint64_t tableId, const void* key, uint16_t keyLength, const RejectRules* rejectRules)
 {
-    if (expect_false(commitStarted)) {
+    if (expect_false(commitStarted) || expect_false(canceled)) {
         throw TxOpAfterCommit(HERE);
     }
 
@@ -235,7 +280,7 @@ void
 Transaction::write(uint64_t tableId, const void* key, uint16_t keyLength,
         const void* buf, uint32_t length, const RejectRules* rejectRules)
 {
-    if (expect_false(commitStarted)) {
+    if (expect_false(commitStarted) || expect_false(canceled)) {
         throw TxOpAfterCommit(HERE);
     }
 
@@ -393,7 +438,7 @@ Transaction::ReadOp::isReady()
 void
 Transaction::ReadOp::wait(bool* objectExists)
 {
-    if (expect_false(transaction->commitStarted)) {
+    if (expect_false(transaction->commitStarted) || expect_false(transaction->canceled)) {
         throw TxOpAfterCommit(HERE);
     }
 

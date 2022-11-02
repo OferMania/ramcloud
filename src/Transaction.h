@@ -60,16 +60,30 @@ class Transaction {
     void sync();
     bool commitAndSync();
 
+    // similar to commitAndSync(), except we invoke cancel() if either transaction failed (due to
+    // reject-rules or whatnot) OR no decision was reached after a duration of milliseconds
+    // specified by timeout_ms. We encourage inspecting wasCanceled() after calling
+    // commitAndSyncWithTimeout() to distinguish a timeout from a regular failed transaction.
+    bool commitAndSyncWithTimeout(uint64_t timeout_ms);
+    bool wasCanceled() { return canceled; }
+
+    void cancel();
+
     /**
      * This set of methods is used to issue a commit asynchronously.
      * Sample code:
      *     Transaction t;
      *     ... add operations ...
      *     t.commitAsync();
-     *     while (!t.commitReady())
+     *     while (time() <= some_limit && !t.commitReady()) {
      *         t.poll();
-     *     if (!t.result())
+     *     }
+     *     if (time() > some_limit) {
+     *         t.cancel();
+     *         std::cerr << "transaction took too long and was canceled" << std::endl;
+     *     } else if (!t.result()) {
      *         std::cerr << "transaction failed" << std::endl;
+     *     }
      */
     void commitAsync();
     bool commitReady();
@@ -164,6 +178,9 @@ class Transaction {
 
     /// Points to the next batch of ReadOps to be sent.
     std::shared_ptr<ReadBatch> nextReadBatchPtr;
+
+    /// Indicates if the corresponding transaction has been canceled or not.
+    bool canceled;
 
     DISALLOW_COPY_AND_ASSIGN(Transaction);
 };
