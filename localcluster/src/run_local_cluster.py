@@ -32,6 +32,10 @@ if __name__ == '__main__':
                              "NETWORK is the name of the docker network to create (not an IP address), "
                              "and NODE is the prefix to use for the names of the docker containers corresponding to the nodes, and "
                              "appears as NODE-1, NODE-2, NODE-3, etc.")
+    parser.add_argument('--table', '-t', type=str,
+                        help="(Optional) When this is specified, we create a table named "
+                             "TABLE in RamCloud, along with a single testKey and "
+                             "testValue in that table.")
 
 args = parser.parse_args()
 
@@ -48,8 +52,15 @@ print("docker_names = {},{},{}".format(cu.docker_image_name, cu.docker_network_n
 if (args.action == "start"):
     x = cu.ClusterClient()
     x.setUp(num_nodes = args.nodes)
+    if args.table and len(args.table) > 0:
+        x.createTestValue(args.table)
 elif (args.action == "status"):
-    cu.get_status()
+    docker_network, docker_containers = cu.get_status()
+    ensemble = cu.get_ensemble(len(docker_containers))
+    if args.table and len(args.table) > 0:
+        cu.create_table(ensemble, args.table)
+    table_names = cu.get_table_names(ensemble)
+    print("Table names = ", table_names)
 elif (args.action == "stop"):
     docker_network, docker_containers = cu.get_status()
     cu.destroy_network_and_containers(docker_network, docker_containers)
@@ -68,6 +79,8 @@ elif (args.action == "reset"):
         print("Bringing up new cluster with ", args.nodes, " nodes")
         x = cu.ClusterClient()
         x.setUp(num_nodes = args.nodes)
+        if args.table and len(args.table) > 0:
+            x.createTestValue(args.table)
     elif (not docker_containers):
         # A network but no containers means no data, so take it down, & bring back up
         print("Inconsistent State")
@@ -75,6 +88,8 @@ elif (args.action == "reset"):
         cu.destroy_network_and_containers(docker_network, [])
         x = cu.ClusterClient()
         x.setUp(num_nodes = args.nodes)
+        if args.table and len(args.table) > 0:
+            x.createTestValue(args.table)
     else:
         # We have a network and containers. Get the ensemble, table names, then drop all tables!
         print("Found a cluster with ", len(docker_containers), " nodes")
@@ -84,5 +99,7 @@ elif (args.action == "reset"):
         print("Table names = ", table_names)
         print("Dropping all tables")
         cu.drop_tables(ensemble, table_names)
+        if args.table and len(args.table) > 0:
+            cu.create_table(ensemble, args.table)
 else:
     parser.print_help()
