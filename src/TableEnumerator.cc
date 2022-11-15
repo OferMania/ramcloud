@@ -247,7 +247,7 @@ TableEnumerator::requestMoreObjects()
         // enumerating immediately.
         if (status != STATUS_OK) {
             done = true;
-            LOG(WARNING, "Got status %d when invoking enumerateTable for tableId %llu", status, tableId);
+            LOG(WARNING, "Got status %d when invoking enumerateTable for tableId %lu", status, tableId);
             return;
         }
 

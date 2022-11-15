@@ -122,12 +122,12 @@ class Service {
         checkServerId(&reqHdr->common);
         typename Op::Response* respHdr =
             rpc->replyPayload->emplaceAppend<typename Op::Response>();
-        /* Clear the response header, so that unused fields are zero;
+        /* Clear the response header by invoking default constructor;
          * this makes tests more reproducible, and it is also needed
          * to avoid possible security problems where random server
          * info could leak out to clients through unused packet
          * fields. */
-        memset(respHdr, 0, sizeof(*respHdr));
+        *respHdr = typename Op::Response();
         (static_cast<S*>(this)->*handler)(reqHdr, respHdr, rpc);
     }
 

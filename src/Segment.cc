@@ -346,7 +346,8 @@ Segment::appendLogHeader(LogEntryType type,
                             logBuffer->alloc(sizeof(EntryHeader) +
                             entryHeader.getLengthBytes()));
     *header = entryHeader;
-    memcpy(header + 1, &objectSize, entryHeader.getLengthBytes());
+    uint32_t* afterHeader = reinterpret_cast<uint32_t*>(header + 1);
+    memcpy(afterHeader, &objectSize, entryHeader.getLengthBytes());
 }
 
 /**

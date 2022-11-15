@@ -654,11 +654,20 @@ bool
 Dispatch::fdIsReady(int fd)
 {
     assert(fd >= 0);
-    fd_set fds;
-    FD_ZERO(&fds);
-    FD_SET(fd, &fds);
+    // FDS's indicating readiness for read, write, and error
+    fd_set fds_r;
+    fd_set fds_w;
+    fd_set fds_e;
+
+    FD_ZERO(&fds_r);
+    FD_SET(fd, &fds_r);
+    FD_ZERO(&fds_w);
+    FD_SET(fd, &fds_w);
+    FD_ZERO(&fds_e);
+    FD_SET(fd, &fds_e);
+
     struct timeval timeout {0, 0};
-    int r = select(fd + 1, &fds, &fds, &fds, &timeout);
+    int r = select(fd + 1, &fds_r, &fds_w, &fds_e, &timeout);
     if (r < 0) {
         throw FatalError(HERE,
             "select error on Dispatch's exitPipe", errno);

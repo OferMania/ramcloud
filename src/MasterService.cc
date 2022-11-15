@@ -438,6 +438,8 @@ MasterService::enumerate(const WireFormat::Enumerate::Request* reqHdr,
     // header and also the serialized iteration state at the end of enumeration.
     uint32_t maxPayloadBytes = downCast<uint32_t>(
             Transport::MAX_RPC_LEN - sizeof(*respHdr) - (1 << 20));
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
     Enumeration enumeration(
             reqHdr->tableId, reqHdr->keysOnly,
             reqHdr->tabletFirstHash,
@@ -446,6 +448,7 @@ MasterService::enumerate(const WireFormat::Enumerate::Request* reqHdr,
             *objectManager.getLog(),
             *objectManager.getObjectMap(),
             *rpc->replyPayload, maxPayloadBytes);
+#pragma GCC diagnostic pop
     enumeration.complete();
     respHdr->payloadBytes = rpc->replyPayload->size()
             - downCast<uint32_t>(sizeof(*respHdr));
@@ -611,6 +614,8 @@ MasterService::increment(const WireFormat::Increment::Request* reqHdr,
     // Read the current value of the object and add the increment value
     Key key(reqHdr->tableId, *rpc->requestPayload, sizeof32(*reqHdr),
             reqHdr->keyLength);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
     Status *status = &respHdr->common.status;
 
     int64_t asInt64 = reqHdr->incrementInt64;
@@ -618,6 +623,7 @@ MasterService::increment(const WireFormat::Increment::Request* reqHdr,
     uint64_t rpcResultPtr;
     incrementObject(&key, reqHdr->rejectRules, &asInt64, &asDouble,
                     &respHdr->version, status, reqHdr, respHdr, &rpcResultPtr);
+#pragma GCC diagnostic pop
 
     if (*status == STATUS_OK) {
         objectManager.syncChanges();
@@ -802,10 +808,13 @@ MasterService::readHashes(
 {
     uint32_t reqOffset = sizeof32(*reqHdr);
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
     objectManager.readHashes(reqHdr->tableId, reqHdr->numHashes,
             rpc->requestPayload, reqOffset,
             maxResponseRpcLen - sizeof32(*respHdr),
             rpc->replyPayload, &respHdr->numHashes, &respHdr->numObjects);
+#pragma GCC diagnostic pop
 }
 
 /**
@@ -1313,9 +1322,12 @@ MasterService::multiIncrement(const WireFormat::MultiOp::Request* reqHdr,
            rpc->replyPayload->emplaceAppend<
                WireFormat::MultiOp::Response::IncrementPart>();
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
         incrementObject(&key, currentReq->rejectRules,
             &asInt64, &asDouble,
             &currentResp->version, &currentResp->status);
+#pragma GCC diagnostic pop
         currentResp->newValue.asInt64 = asInt64;
         currentResp->newValue.asDouble = asDouble;
     }
@@ -1403,9 +1415,12 @@ MasterService::multiRead(const WireFormat::MultiOp::Request* reqHdr,
 
         uint32_t initialLength = rpc->replyPayload->size();
         RejectRules rejectRules = currentReq->rejectRules;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
         currentResp->status = objectManager.readObject(
                 key, rpc->replyPayload, &rejectRules,
                 &currentResp->version);
+#pragma GCC diagnostic pop
 
         if (currentResp->status != STATUS_OK)
             continue;
@@ -1478,8 +1493,11 @@ MasterService::multiRemove(const WireFormat::MultiOp::Request* reqHdr,
 
         RejectRules rejectRules = currentReq->rejectRules;
         try {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
             currentResp->status = objectManager.removeObject(
                     key, &rejectRules, &currentResp->version);
+#pragma GCC diagnostic pop
         }
         catch (RetryException& e) {
             currentResp->status = STATUS_RETRY;
@@ -1567,9 +1585,12 @@ MasterService::multiWrite(const WireFormat::MultiOp::Request* reqHdr,
         // Write the object.
         RejectRules rejectRules = currentReq->rejectRules;
         try {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
             currentResp->status = objectManager.writeObject(
                     object, &rejectRules, &currentResp->version,
                     &oldObjectBuffers[i]);
+#pragma GCC diagnostic pop
         }
         catch (RetryException& e) {
             currentResp->status = STATUS_RETRY;
@@ -1742,9 +1763,11 @@ MasterService::read(const WireFormat::Read::Request* reqHdr,
     RejectRules rejectRules = reqHdr->rejectRules;
     bool valueOnly = true;
     uint32_t initialLength = rpc->replyPayload->size();
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
     respHdr->common.status = objectManager.readObject(
             key, rpc->replyPayload, &rejectRules, &respHdr->version, valueOnly);
-
+#pragma GCC diagnostic pop
     if (respHdr->common.status != STATUS_OK)
         return;
 
@@ -1788,8 +1811,11 @@ MasterService::readKeysAndValue(
 
     RejectRules rejectRules = reqHdr->rejectRules;
     uint32_t initialLength = rpc->replyPayload->size();
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
     respHdr->common.status = objectManager.readObject(
             key, rpc->replyPayload, &rejectRules, &respHdr->version);
+#pragma GCC diagnostic pop
 
     if (respHdr->common.status != STATUS_OK)
         return;
@@ -1921,9 +1947,12 @@ MasterService::remove(const WireFormat::Remove::Request* reqHdr,
             respHdr, sizeof(*respHdr));
 
     // Remove the object.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
     respHdr->common.status = objectManager.removeObject(
             key, &rejectRules, &respHdr->version, &oldBuffer,
             &rpcResult, &rpcResultPtr);
+#pragma GCC diagnostic pop
 
     if (respHdr->common.status == STATUS_OK &&
         respHdr->version != VERSION_NONEXISTENT) {
@@ -3207,9 +3236,12 @@ MasterService::write(const WireFormat::Write::Request* reqHdr,
             respHdr, sizeof(*respHdr));
 
     // Write the object.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
     respHdr->common.status = objectManager.writeObject(
             object, &rejectRules, &respHdr->version, &oldObjectBuffer,
             &rpcResult, &rpcResultPtr);
+#pragma GCC diagnostic pop
 
     if (respHdr->common.status == STATUS_OK) {
         objectManager.syncChanges();

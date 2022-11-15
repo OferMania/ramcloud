@@ -495,7 +495,7 @@ LogCleaner::doDiskCleaning()
     localMetrics.totalSegmentsCleaned += segmentsToClean.size();
     localMetrics.totalSurvivorsCreated += survivors.size();
     localMetrics.totalRuns++;
-    if (segmentManager.getSegmentUtilization() >= minDiskUtilization)
+    if (static_cast<uint32_t>(std::max(0, segmentManager.getSegmentUtilization())) >= minDiskUtilization)
         localMetrics.totalLowDiskSpaceRuns++;
     onDiskMetrics.lastRunTimestamp = WallTime::secondsTimestamp();
     onDiskMetrics.merge(localMetrics);
@@ -770,7 +770,7 @@ LogCleaner::Balancer::isMemoryLow(CleanerThreadState* thread)
 
     // TODO: When we exceed dangerThreshold, we should probably
     // do something, but for now, we warn the user
-    if (T >= cleaner->dangerThreshold) {
+    if (static_cast<uint32_t>(std::max(0, T)) >= cleaner->dangerThreshold) {
         LOG(WARNING, "Memory Utilization (%d) exceeds Danger Threshold", T);
     }
 
@@ -836,7 +836,7 @@ LogCleaner::TombstoneRatioBalancer::isDiskCleaningNeeded(
         return false;
 
     // If we're running out of disk space, we need to run the disk cleaner.
-    if (cleaner->segmentManager.getSegmentUtilization() >= cleaner->minDiskUtilization)
+    if (static_cast<uint32_t>(std::max(0, cleaner->segmentManager.getSegmentUtilization())) >= cleaner->minDiskUtilization)
         return true;
 
     // If we are low on memory, but the compactor is disabled, we must clean.
@@ -867,7 +867,7 @@ LogCleaner::TombstoneRatioBalancer::isDiskCleaningNeeded(
 
     // TODO: When we exceed dangerThreshold, we should probably
     // do something, but for now, we warn the user
-    if (U >= cleaner->dangerThreshold) {
+    if (static_cast<uint32_t>(std::max(0, U)) >= cleaner->dangerThreshold) {
         LOG(WARNING, "Undead Tombstone Utilization (%d) exceeds Danger Threshold", U);
     }
 
@@ -903,7 +903,7 @@ LogCleaner::FixedBalancer::isDiskCleaningNeeded(CleanerThreadState* thread)
     if (thread->threadNumber != 0)
         return false;
 
-    if (cleaner->segmentManager.getSegmentUtilization() >= cleaner->minDiskUtilization)
+    if (static_cast<uint32_t>(std::max(0, cleaner->segmentManager.getSegmentUtilization())) >= cleaner->minDiskUtilization)
         return true;
 
     // If the memory compactor has failed to free any space recent, it's a good

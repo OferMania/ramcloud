@@ -108,7 +108,11 @@ class RpcWrapper : public Transport::RpcNotifier {
         static_assert(sizeof(reqHdr->common) ==
                 sizeof(WireFormat::RequestCommon),
                 "must pass targetId to allocHeader");
-        memset(reqHdr, 0, sizeof(*reqHdr));
+
+        // initialize *reqHdr to that of its default constructor
+        *reqHdr = typename RpcType::Request();
+
+        // set common fields
         reqHdr->common.opcode = RpcType::opcode;
         reqHdr->common.service = RpcType::service;
         return reqHdr;
@@ -139,10 +143,15 @@ class RpcWrapper : public Transport::RpcNotifier {
         RpcLevel::checkCall(RpcType::opcode);
         typename RpcType::Request* reqHdr =
                 request.emplaceAppend<typename RpcType::Request>();
-        memset(reqHdr, 0, sizeof(*reqHdr));
+
+        // initialize *reqHdr to that of its default constructor
+        *reqHdr = typename RpcType::Request();
+
+        // set common fields
         reqHdr->common.opcode = RpcType::opcode;
         reqHdr->common.service = RpcType::service;
         reqHdr->common.targetId = targetId.getId();
+
         return reqHdr;
     }
 

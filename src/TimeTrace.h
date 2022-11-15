@@ -214,7 +214,8 @@ class TimeTrace {
 
                 event->timestamp = timestamp;
                 event->format = format;
-                for (size_t i = 0; i < sizeof...(args); i++) {
+                size_t argSize = sizeof...(Args);
+                for (size_t i = 0; i < argSize; i++) {
                     event->args[i] = eventArgs[i];
                 }
             }

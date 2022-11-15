@@ -58,7 +58,7 @@ FailureDetector::FailureDetector(Context* context,
       threadShouldExit(false)
 {
     assert(timeoutUsec <= probeUsec);
-    LOG(WARNING, "FailureDetector initialized with probeUsec=%lu and timeoutUsec=%lu", probeUsec, timeoutUsec);
+    LOG(WARNING, "FailureDetector initialized with probeUsec=%u and timeoutUsec=%u", probeUsec, timeoutUsec);
 }
 
 FailureDetector::~FailureDetector()
