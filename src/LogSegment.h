@@ -102,10 +102,12 @@ class LogSegment : public Segment {
           entryLengths(),
           deadEntryLengths()
     {
-        memset(entryCounts, 0, sizeof(entryCounts));
-        memset(deadEntryCounts, 0, sizeof(deadEntryCounts));
-        memset(entryLengths, 0, sizeof(entryLengths));
-        memset(deadEntryLengths, 0, sizeof(deadEntryLengths));
+        for (size_t ii = 0; ii < TOTAL_LOG_ENTRY_TYPES; ++ii) {
+            entryCounts[ii] = 0;
+            deadEntryCounts[ii] = 0;
+            entryLengths[ii] = 0;
+            deadEntryLengths[ii] = 0;
+        }
     }
 
     /**

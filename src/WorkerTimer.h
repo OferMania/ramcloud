@@ -156,7 +156,7 @@ class WorkerTimer {
         ////before its triggerTime is updated.  This is because of the intrusive
         /// SortByTriggerTime comparison operator.
         struct SortByTriggerTime {
-            bool operator()(WorkerTimer* lhs, WorkerTimer* rhs)
+            bool operator()(const WorkerTimer* lhs, const WorkerTimer* rhs) const
             {
                 return lhs->triggerTime < rhs->triggerTime ||
                         (lhs->triggerTime == rhs->triggerTime && lhs < rhs);
@@ -174,7 +174,7 @@ class WorkerTimer {
         ////before its startTime is updated.  This is because of the intrusive
         /// SortByStartTime comparison operator.
         struct SortByStartTime {
-            bool operator()(WorkerTimer* lhs, WorkerTimer* rhs)
+            bool operator()(const WorkerTimer* lhs, const WorkerTimer* rhs) const
             {
                 return lhs->startTime < rhs->startTime ||
                         (lhs->startTime == rhs->startTime && lhs < rhs);

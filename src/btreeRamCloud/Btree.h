@@ -79,14 +79,20 @@ struct BtreeEntry {
         , pKHash(0)
     {}
 
-    BtreeEntry& operator =(const BtreeEntry& other) {
+    BtreeEntry(const BtreeEntry& other)
+        : key(other.key)
+        , keyLength(other.keyLength)
+        , pKHash(other.pKHash)
+    {}
+
+    BtreeEntry& operator=(const BtreeEntry& other) {
         this->keyLength = other.keyLength;
         this->pKHash = other.pKHash;
         key = other.key;
         return *this;
     }
 
-    bool operator ==(const BtreeEntry& other) const {
+    bool operator==(const BtreeEntry& other) const {
         return (keyLength == other.keyLength) &&
                 (pKHash == other.pKHash) &&
                 (0 == memcmp(key, other.key, keyLength));
@@ -2196,8 +2202,9 @@ PRIVATE:
                 (ptr->isLeaf() ? sizeof32(LeafNode) : sizeof32(InnerNode));
 
         if (peekSize < nodeSize) {
-            ptr = static_cast<Node*>(outBuffer->alloc(nodeSize));
-            memmove(ptr, outBuffer->getRange(sizeBeforeRead, nodeSize), nodeSize);
+            void* vp = outBuffer->alloc(nodeSize);
+            memmove(vp, outBuffer->getRange(sizeBeforeRead, nodeSize), nodeSize);
+            ptr = static_cast<Node*>(vp);
         }
 
         RAMCLOUD_LOG(DEBUG, "Read object from log, nodeId = %lu, size = %d",
@@ -2238,9 +2245,10 @@ PRIVATE:
                 (ptr->isLeaf() ? sizeof32(LeafNode) : sizeof32(InnerNode));
 
         if (peekSize < nodeSize) {
-            ptr = static_cast<Node*>(nodeObjectValue->alloc(nodeSize));
-            memmove(ptr, nodeObjectValue->getRange(0, nodeSize),
+            void* vp = nodeObjectValue->alloc(nodeSize);
+            memmove(vp, nodeObjectValue->getRange(0, nodeSize),
                     nodeSize);
+            ptr = static_cast<Node*>(vp);
         }
 
         ptr->reinitFromRead(nodeObjectValue, 0);

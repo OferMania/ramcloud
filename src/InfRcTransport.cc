@@ -166,13 +166,13 @@ ibv_gid hexStringToGid(const string& origHexStr)
     }
     LOG(DEBUG, "converted hex to : %s", hexStr.c_str());
 
-    auto part1 = static_cast<uint32_t>(htonl(std::stoul(hexStr.substr(0, 8), nullptr, 16)));
-    auto part2 = static_cast<uint32_t>(htonl(std::stoul(hexStr.substr(8, 8), nullptr, 16)));
+    auto part1 = htonl(static_cast<uint32_t>(std::stoul(hexStr.substr(0, 8), nullptr, 16)));
+    auto part2 = htonl(static_cast<uint32_t>(std::stoul(hexStr.substr(8, 8), nullptr, 16)));
     uint64_t subnext_prefix = static_cast<uint64_t>(part2) << 32;
     subnext_prefix |= static_cast<uint64_t>(part1);
 
-    auto part3 = static_cast<uint32_t>(htonl(std::stoul(hexStr.substr(16, 8), nullptr, 16)));
-    auto part4 = static_cast<uint32_t>(htonl(std::stoul(hexStr.substr(24, 8), nullptr, 16)));
+    auto part3 = htonl(static_cast<uint32_t>(std::stoul(hexStr.substr(16, 8), nullptr, 16)));
+    auto part4 = htonl(static_cast<uint32_t>(std::stoul(hexStr.substr(24, 8), nullptr, 16)));
     uint64_t interface_id = static_cast<uint64_t>(part4) << 32;
     interface_id |= static_cast<uint64_t>(part3);
 
@@ -217,6 +217,8 @@ InfRcTransport::InfRcTransport(Context* context, const ServiceLocator *local_sl,
     , serverSetupSocket(-1)
     , clientSetupSocket(-1)
     , clientPort(0)
+    , gidIndex(0)
+    , gid({})
     , serverPortMap()
     , clientSendQueue()
     , numUsedClientSrqBuffers(MAX_SHARED_RX_QUEUE_DEPTH)
@@ -1227,7 +1229,7 @@ InfRcTransport::sendZeroCopy(uint64_t nonce, Buffer* message, QueuePair* qp,
 
     Buffer::Iterator it(message);
     while (!it.isDone()) {
-        const uintptr_t addr = reinterpret_cast<const uintptr_t>(it.getData());
+        const uintptr_t addr = reinterpret_cast<uintptr_t>(it.getData());
         // See if we can transmit this chunk from its current location
         // (zero copy) vs. copying it into a transmit buffer:
         // * The chunk must lie in the range of registered memory that

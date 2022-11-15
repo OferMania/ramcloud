@@ -639,10 +639,9 @@ struct MultiOpObject {
         : tableId(tableId)
         , key(key)
         , keyLength(keyLength)
+        , rejectRules(rr ? *rr : defaultRejectRules)
         , status()
-    {
-      rejectRules = (rr ? *rr : defaultRejectRules);
-    }
+    {}
 
     MultiOpObject()
         : tableId()

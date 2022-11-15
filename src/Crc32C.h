@@ -179,11 +179,21 @@ class Crc32C {
     }
 
     /**
+     * Copy-constructor simply copies the accumulated result thus far.
+     */
+    Crc32C(const Crc32C& other)
+        : useHardware(other.useHardware)
+        , result(other.result)
+    {
+    }
+
+    /**
      * Assignment simply copies the accumulated result thus far.
      */
     Crc32C&
     operator=(const Crc32C& other)
     {
+        useHardware = other.useHardware;
         result = other.result;
         return *this;
     }

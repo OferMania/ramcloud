@@ -329,8 +329,10 @@ Object::appendKeysAndValueToBuffer(
         KeyOffsets *keyOffsetsHelper = reinterpret_cast<KeyOffsets *>(
                                     request->alloc(KEY_INFO_LENGTH(numKeys)));
         keyOffsetsHelper->numKeys = numKeys;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
         CumulativeKeyLength *cumLengths = keyOffsetsHelper->cumulativeLengths;
-
+#pragma GCC diagnostic pop
 
         for (i = 0; i < numKeys; i++) {
             // if the length of a key is 0, we expect the corresponding key
@@ -500,7 +502,10 @@ Object::getKey(KeyIndex keyIndex, KeyLength *keyLength)
 
     uint32_t keyOffset; // 0 corresponds to the starting of keysAndValue
     uint32_t length;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
     const CumulativeKeyLength *cumLengths = keyOffsets->cumulativeLengths;
+#pragma GCC diagnostic pop
     if (keyIndex == 0) {
         keyOffset = firstKeyPos;
         length = cumLengths[0];
@@ -545,7 +550,10 @@ Object::getKeyLength(KeyIndex keyIndex)
     if (keyIndex >= keyOffsets->numKeys)
         return 0;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
     const CumulativeKeyLength *cumLengths = keyOffsets->cumulativeLengths;
+#pragma GCC diagnostic pop
     if (keyIndex == 0)
         return cumLengths[0];
     else
@@ -610,7 +618,10 @@ Object::getValue(uint32_t *valueLength)
     if (!fillKeyOffsets())
         return NULL;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
     const CumulativeKeyLength *cumLengths = keyOffsets->cumulativeLengths;
+#pragma GCC diagnostic pop
     // To calculate the starting position of the value, we have to account for
     // the number of keys, all the cumulative length values and total length
     // of all the keys. The total length of all the keys is given by the
@@ -648,7 +659,10 @@ Object::getValueOffset(uint32_t *offset)
 {
     if (!fillKeyOffsets())
         return false;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
     const CumulativeKeyLength *cumLengths = keyOffsets->cumulativeLengths;
+#pragma GCC diagnostic pop
     // To calculate the starting position of the value, we have to account for
     // the number of keys, all the cumulative length values and total length
     // of all the keys.

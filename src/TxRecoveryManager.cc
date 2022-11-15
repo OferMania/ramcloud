@@ -479,7 +479,10 @@ TxRecoveryManager::RecoveryTask::DecisionRpc::DecisionRpc(Context* context,
     reqHdr->transactionId = task->transactionId;
     reqHdr->recovered = true;
     reqHdr->participantCount = 0;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
     participantCount = &reqHdr->participantCount;
+#pragma GCC diagnostic pop
 }
 
 /**
@@ -627,7 +630,10 @@ TxRecoveryManager::RecoveryTask::RequestAbortRpc::RequestAbortRpc(
 {
     reqHdr->leaseId = task->leaseId;
     reqHdr->participantCount = 0;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
     participantCount = &reqHdr->participantCount;
+#pragma GCC diagnostic pop
 }
 
 /**

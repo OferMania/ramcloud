@@ -118,7 +118,7 @@ cd /src/ramcloud
 
 # Build RAMCloud.
 rm -rf install
-make --jobs=$(($(nproc) + ${NPROC_INC})) install BUILD_TYPE="${BUILD_TYPE}" GLIBCXX_USE_CXX11_ABI=yes EXTRACXXFLAGS='-Wno-error' DPDK="${USE_DPDK}" ARCH="${ARCH}" EXTRALIBS="${EXTRA_LIBS}"
+make --jobs=$(($(nproc) + ${NPROC_INC})) install BUILD_TYPE="${BUILD_TYPE}" DPDK="${USE_DPDK}" ARCH="${ARCH}" EXTRALIBS="${EXTRA_LIBS}"
 
 # Rename the binaries to something a little more descriptive.
 mv install/bin/coordinator install/bin/rc-coordinator

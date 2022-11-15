@@ -167,8 +167,8 @@ EPYDOC ?= epydoc
 EPYDOCFLAGS ?= --simple-term -v
 DOXYGEN ?= doxygen
 
-C_STANDARD ?= c11
-CXX_STANDARD ?= c++11
+C_STANDARD ?= c17
+CXX_STANDARD ?= c++20
 
 # Using ccache is as simple as prefixing the compilation commands with `ccache`.
 ifeq ($(CCACHE),yes)

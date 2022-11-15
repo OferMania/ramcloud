@@ -738,41 +738,18 @@ Infiniband::QueuePair::activate(const Tub<MacAddress>& localMac)
     // For raw ethernet QP, register a flow steering rule that accepts all
     // RAMCloud packets (identified by EtherType field) addressed to us.
     if (type == IBV_QPT_RAW_PACKET) {
-        const uint8_t* local_mac = localMac->address;
-        struct raw_eth_flow_attr {
-            struct ibv_flow_attr attr;
-            struct ibv_flow_spec_eth spec_eth;
-        } __attribute__((packed)) flow_attr = {
-            .attr = {
+        struct ibv_flow_attr attr = {
                 .comp_mask = 0,
                 .type = IBV_FLOW_ATTR_NORMAL,
-                .size = sizeof(flow_attr),
+                .size = sizeof(struct ibv_flow_attr) + sizeof(struct ibv_flow_spec_eth),
                 .priority = 0,
                 .num_of_specs = 1,
                 .port = downCast<uint8_t>(ibPhysicalPort),
                 .flags = 0,
-            },
-            .spec_eth = {
-                .type = IBV_FLOW_SPEC_ETH,
-                .size = sizeof(struct ibv_flow_spec_eth),
-                .val = {
-                    .dst_mac = { local_mac[0], local_mac[1], local_mac[2],
-                                 local_mac[3], local_mac[4], local_mac[5] },
-                    .src_mac = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-                    .ether_type = HTONS(NetUtil::EthPayloadType::RAMCLOUD),
-                    .vlan_tag = 0,
-                },
-                .mask = {
-                    .dst_mac = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF },
-                    .src_mac = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-                    .ether_type = 0xFFFF,
-                    .vlan_tag = 0,
-                }
-            }
         };
 
         struct ibv_flow *eth_flow;
-        eth_flow = ibv_create_flow(qp, &flow_attr.attr);
+        eth_flow = ibv_create_flow(qp, &attr);
         if (!eth_flow) {
             LOG(ERROR, "failed to attach steering flow: %s", strerror(errno));
             throw TransportException(HERE, ret);

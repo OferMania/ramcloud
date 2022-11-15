@@ -68,11 +68,12 @@ class InMemory {
           relocationAppendTicks(0),
           compactionCompleteTicks(0)
     {
-        memset(totalEntriesScanned, 0, sizeof(totalEntriesScanned));
-        memset(totalLiveEntriesScanned, 0, sizeof(totalLiveEntriesScanned));
-        memset(totalScannedEntryLengths, 0, sizeof(totalScannedEntryLengths));
-        memset(totalLiveScannedEntryLengths, 0,
-            sizeof(totalLiveScannedEntryLengths));
+        for (size_t ii = 0; ii < TOTAL_LOG_ENTRY_TYPES; ++ii) {
+            totalEntriesScanned[ii] = 0;
+            totalLiveEntriesScanned[ii] = 0;
+            totalScannedEntryLengths[ii] = 0;
+            totalLiveScannedEntryLengths[ii] = 0;
+        }
     }
 
     /**
@@ -264,11 +265,12 @@ class OnDisk {
           cleanedSegmentDiskHistogram(101, 1),
           allSegmentsDiskHistogram(101, 1)
     {
-        memset(totalEntriesScanned, 0, sizeof(totalEntriesScanned));
-        memset(totalLiveEntriesScanned, 0, sizeof(totalLiveEntriesScanned));
-        memset(totalScannedEntryLengths, 0, sizeof(totalScannedEntryLengths));
-        memset(totalLiveScannedEntryLengths, 0,
-            sizeof(totalLiveScannedEntryLengths));
+        for (size_t ii = 0; ii < TOTAL_LOG_ENTRY_TYPES; ++ii) {
+            totalEntriesScanned[ii] = 0;
+            totalLiveEntriesScanned[ii] = 0;
+            totalScannedEntryLengths[ii] = 0;
+            totalLiveScannedEntryLengths[ii] = 0;
+        }
     }
 
     /**

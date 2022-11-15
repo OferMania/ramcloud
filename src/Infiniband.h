@@ -50,7 +50,7 @@ class Infiniband {
     // back and forth.
     class QueuePairTuple {
       public:
-        QueuePairTuple() : qpn(0), psn(0), lid(0), nonce(0), gidIndex(0)
+        QueuePairTuple() : qpn(0), psn(0), lid(0), nonce(0), gidIndex(0), gid({})
         {
             memset(&gid, 0, sizeof(gid));
         }
