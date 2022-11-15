@@ -190,6 +190,14 @@ def get_table_names(ensemble):
         # If tables in zk exists but wasn't initialized, then this is thrown, so return an empty list
         return []
 
+def create_table(ensemble, table_name='test', table_key='testKey', table_value='testValue'):
+    r = ramcloud.RAMCloud()
+    external_storage = 'zk:' + external_storage_string(ensemble)
+    r.connect(external_storage, 'main')
+    r.create_table(table_name)
+    tid = r.get_table_id(table_name)
+    r.write(tid, table_key, table_value)
+
 def drop_tables(ensemble, table_names):
     r = ramcloud.RAMCloud()
     external_storage = 'zk:' + external_storage_string(ensemble)
@@ -333,10 +341,10 @@ class ClusterClient:
             backup_server_id = 1
         return backup_server_id
 
-    def createTestValue(self):
-        self.rc_client.create_table('test')
-        self.table = self.rc_client.get_table_id('test')
-        self.rc_client.write(self.table, 'testKey', 'testValue')
+    def createTestValue(self, table_name='test', table_key='testKey', table_value='testValue'):
+        self.rc_client.create_table(table_name)
+        self.table = self.rc_client.get_table_id(table_name)
+        self.rc_client.write(self.table, table_key, table_value)
 
     # Definitely useful to invoke this method from the Python interpreter.
     def outputLogs(self, path="/src/tmp"):
