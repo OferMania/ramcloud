@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2010-2016 Stanford University
 #
@@ -16,7 +16,7 @@
 
 """Runs a recovery of a master."""
 
-from __future__ import division, print_function
+
 from common import *
 import cluster
 import config
@@ -188,9 +188,9 @@ def insist(*args, **kwargs):
     while True:
         try:
             return recover(*args, **kwargs)
-        except KeyboardInterrupt, e:
+        except KeyboardInterrupt as e:
             raise
-        except Exception, e:
+        except Exception as e:
             print('Recovery failed:', e)
             print('Trying again...')
         time.sleep(0.1)
@@ -295,8 +295,8 @@ if __name__ == '__main__':
             for trend in options.trends:
                 if trend not in trends:
                     trends.append(trend)
-        trends = zip(trends,
-                     [stats['ns'] / 1e9] * len(trends))
+        trends = list(zip(trends,
+                     [stats['ns'] / 1e9] * len(trends)))
 
         # print and upload dumpstr report
         dumpstr = getDumpstr()

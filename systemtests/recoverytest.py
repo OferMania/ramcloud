@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2012 Stanford University
 #
@@ -14,8 +14,8 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-from __future__ import division, print_function
-from ramcloudtest import *
+
+from .ramcloudtest import *
 import ramcloud
 import cluster
 import log
@@ -38,7 +38,7 @@ def sync():
     def decorate(f):
         def new_f(*args, **kwargs):
             return f(*args, **kwargs)
-        new_f.func_name = f.func_name
+        new_f.__name__ = f.__name__
         new_f.sync = True
         return new_f
     return decorate
@@ -47,7 +47,7 @@ class RecoveryTestCase(ContextManagerTestCase):
     def __enter__(self):
         self.last_unused_port = 12247
         import random
-        self.clusterName = ''.join([chr(random.choice(range(ord('a'), ord('z'))))
+        self.clusterName = ''.join([chr(random.choice(list(range(ord('a'), ord('z')))))
                                     for c in range(8)])
         self.num_hosts = 8
         require_hosts(self.num_hosts)

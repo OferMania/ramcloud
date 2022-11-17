@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2016 Stanford University
 #
@@ -21,7 +21,7 @@ so that the first record is at time 0.
 Usage: ttgrep.py string file
 """
 
-from __future__ import division, print_function
+
 from glob import glob
 from optparse import OptionParser
 import math

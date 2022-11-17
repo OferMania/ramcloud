@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2010 Stanford University
 #
 # Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
 
 """Misc utilities and variables for Python scripts."""
 
-import commands
+import subprocess
 import contextlib
 import os
 import random
@@ -46,10 +46,10 @@ def captureSh(command, **kwargs):
     output = p.communicate()[0]
     if p.returncode:
         raise subprocess.CalledProcessError(p.returncode, command)
-    if output.count('\n') and output[-1] == '\n':
-        return output[:-1]
+    if output.count(b'\n') and output[-1] == b'\n':
+        return output[:-1].decode('utf-8')
     else:
-        return output
+        return output.decode('utf-8')
 
 class Sandbox(object):
     """A context manager for launching and cleaning up remote processes."""
@@ -88,7 +88,7 @@ class Sandbox(object):
         checkHost(host)
         remote_scripts_path = config.hooks.get_remote_scripts_path()
         if bg:
-            sonce = ''.join([chr(random.choice(range(ord('a'), ord('z'))))
+            sonce = ''.join([chr(random.choice(list(range(ord('a'), ord('z')))))
                              for c in range(8)])
 
             server_process = is_server
@@ -238,8 +238,8 @@ def delayedInterrupts():
     quit = []
     def delay(sig, frame):
         if quit:
-            print ('Ctrl-C: Quitting during delayed interrupts section ' +
-                   'because user insisted')
+            print(('Ctrl-C: Quitting during delayed interrupts section ' +
+                   'because user insisted'))
             raise KeyboardInterrupt
         else:
             quit.append((sig, frame))
@@ -306,7 +306,7 @@ def getHosts():
                       i))
     """
     # Find servers locked by user via rcres
-    rcresOutput = commands.getoutput('rcres ls -l | grep "$(whoami)" | cut -c13-16 | grep "rc[0-9]" | cut -c3-4')
+    rcresOutput = subprocess.getoutput('rcres ls -l | grep "$(whoami)" | cut -c13-16 | grep "rc[0-9]" | cut -c3-4')
     rcresFailed = re.match(".*not found.*", rcresOutput)
 
     # If hosts overridden in localconfig.py, check that all servers are locked
@@ -362,7 +362,7 @@ def checkHost(host):
             return True
 
     # Server was not found in the valid list, let's check what the problem may be
-    rcresOutput = commands.getoutput('rcres ls')
+    rcresOutput = subprocess.getoutput('rcres ls')
     rcresFailed = re.match(".*not found.*", rcresOutput)
     if rcresFailed:
         raise Exception ("Attempted to use a host (%s) that is not present in the "

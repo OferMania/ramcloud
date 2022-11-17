@@ -64,9 +64,9 @@ def main():
         assert len(req) == len(resp), (len(req), len(resp), req[:10], resp[:10],
                                        req[-10:], resp[-10:])
         assert req == resp, (req, resp)
-        print
-        print "Message %d with %d frags OK in %dms" % (i, totalFrags,
-                                                       elapsedNs / 1000000)
+        print()
+        print("Message %d with %d frags OK in %dms" % (i, totalFrags,
+                                                       elapsedNs / 1000000))
         d.stat()
 
     #responseBuffer1 = []

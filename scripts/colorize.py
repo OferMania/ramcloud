@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2012 Stanford University
 #
 # Permission to use, copy, modify, and distribute this software for any
@@ -19,7 +19,7 @@
 # http://pypi.python.org/pypi/termcolor
 # 
 # Then just create a script to pipe your junk through colorize.
-# make $* 2>&1 | python colorize.py
+# make $* 2>&1 | python3 colorize.py
 # exit ${PIPESTATUS[0]}
 
 import termcolor
@@ -61,7 +61,7 @@ substs = [ (ss, 'string')
          , ('boost::intrusive_ptr<RAMCloud::Transport::Session>',
             'Transport::SessionRef')
          , (r'^perl .*$', 'perl ...')
-         , (r'^python cpplint\.py.*$', 'cpplint')
+         , (r'^python3 cpplint\.py.*$', 'cpplint')
          ]
 
 prefixesToStrip = [ os.getcwd() + '/src/'
@@ -111,7 +111,7 @@ def markLine(line):
        the action that gets performed."""
     for word, action in markup:
         if word in line:
-            print(action(line))
+            print((action(line)))
             sys.stdout.flush()
             return
 

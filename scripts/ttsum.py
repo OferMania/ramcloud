@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2014-2016 Stanford University
 #
@@ -19,7 +19,7 @@ This program reads a log file and generates summary information for
 time trace information in the file.
 """
 
-from __future__ import division, print_function
+
 from glob import glob
 from optparse import OptionParser
 import math
@@ -159,11 +159,11 @@ if not options.startEvent:
 
     # Compute the length of the longest event name.
     nameLength = 0;
-    for event in eventIntervals.keys():
+    for event in list(eventIntervals.keys()):
         nameLength = max(nameLength, len(event))
 
     # Each iteration through the following loop processes one event name
-    for event in eventIntervals.keys():
+    for event in list(eventIntervals.keys()):
         intervals = eventIntervals[event]
         intervals.sort()
         medianTime = intervals[len(intervals)//2]
@@ -190,7 +190,7 @@ if options.startEvent:
 
     # Compute the length of the longest event name.
     nameLength = 0;
-    for event in relativeEvents.keys():
+    for event in list(relativeEvents.keys()):
         occurrences = relativeEvents[event]
         thisLength = len(event)
         if len(occurrences) > 1:
@@ -198,7 +198,7 @@ if options.startEvent:
         nameLength = max(nameLength, thisLength)
 
     # Each iteration through the following loop processes one event name
-    for event in relativeEvents.keys():
+    for event in list(relativeEvents.keys()):
         occurrences = relativeEvents[event]
 
         # Each iteration through the following loop processes the nth

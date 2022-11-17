@@ -38,7 +38,7 @@ done
 shift $(($OPTIND - 1))
 
 if [[ $color -eq 1 ]]; then
-    colorizer="python scripts/colorize.py"
+    colorizer="python3 scripts/colorize.py"
 else
     colorizer="cat"
 fi

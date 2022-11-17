@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2010 Stanford University
 #
@@ -35,7 +35,7 @@ class PragmaDefinition(dict):
         return self.default
 
     def __str__(self):
-        items = self.items()
+        items = list(self.items())
         if self.default not in self:
             items.append((self.default, '(unknown)'))
         values = []
@@ -69,8 +69,9 @@ def read_pragmas(stream, definitions, magic_pattern):
         m = re.search(magic_pattern, line, re.IGNORECASE)
         if m is None:
             continue
-        for pragma in re.split('[,;]*', m.group(1)):
-            if len(pragma) == 0:
+        if len(m.groups()) >= 1:
+            pragma = m.group(1)
+            if not pragma or len(pragma) == 0:
                 continue
             try:
                 k, v = re.split('\s*=\s*', pragma, 1)
@@ -112,11 +113,11 @@ if __name__ == '__main__':
     definitions = PragmaDefinitions()
     globals_ = {'PragmaDefinition': PragmaDefinition,
                 'definitions': definitions}
-    execfile(options.defs_file, globals_)
+    exec(compile(open(options.defs_file, "rb").read(), options.defs_file, 'exec'), globals_)
     magic_pattern = globals_['magic_pattern']
 
     if options.list_settings:
-        print definitions
+        print(definitions)
         sys.exit(0)
 
 
@@ -131,20 +132,20 @@ if __name__ == '__main__':
             p, v = options.filt.split(':')
             try:
                 if pragmas[p] == int(v):
-                    print filename
+                    print(filename)
             except KeyError:
                 if definitions[p].default == int(v):
-                    print filename
+                    print(filename)
         else:
             if options.query is not None:
                 try:
-                    print pragmas[options.query]
+                    print(pragmas[options.query])
                 except KeyError:
-                    print definitions[options.query].default
+                    print(definitions[options.query].default)
             else:
-                for k, definition in definitions.items():
+                for k, definition in list(definitions.items()):
                     try:
                         v = pragmas[k]
                     except KeyError:
                         v = definition.default
-                    print '%s=%d' % (k, v)
+                    print('%s=%d' % (k, v))

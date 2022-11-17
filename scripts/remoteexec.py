@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2010 Stanford University
 #
 # Permission to use, copy, modify, and distribute this software for any
@@ -30,11 +30,11 @@ if __name__ == '__main__':
     import os
     import sys
 
-    if sys.version_info < (2,5):
+    if sys.version_info < (3,9):
         # Python version too old, try ~/bin/python
         try:
-            if sys.executable != os.path.abspath('bin/python'):
-                os.execv('bin/python', ['bin/python'] + sys.argv)
+            if sys.executable != os.path.abspath('bin/python3'):
+                os.execv('bin/python3', ['bin/python3'] + sys.argv)
         finally:
             raise Exception("Python version is too old: %d.%d" %
                             sys.version_info[:2])

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2009-2010 Stanford University
 #
@@ -92,15 +92,15 @@ class Test(object):
         try:
             while True:
                 if i % 10**6 == 0:
-                    print("PID %d: continuing after %s" % (os.getpid(),
-                          Stats.to_str(self.local_stats)))
+                    print(("PID %d: continuing after %s" % (os.getpid(),
+                          Stats.to_str(self.local_stats))))
 
                 accts = self.choose_accts()
 
                 for retry in RetryStrategy():
                     if die.value:
-                        print("PID %d: done after %s" % (os.getpid(),
-                              Stats.to_str(self.local_stats)))
+                        print(("PID %d: done after %s" % (os.getpid(),
+                              Stats.to_str(self.local_stats))))
                         return
                     try:
                         for oid in accts:
@@ -111,8 +111,8 @@ class Test(object):
                         if not self.algo(accts):
                             retry.later()
                     except BreakException:
-                        print("PID %d: crash after %s" % (os.getpid(),
-                              Stats.to_str(self.local_stats)))
+                        print(("PID %d: crash after %s" % (os.getpid(),
+                              Stats.to_str(self.local_stats))))
                         self.local_stats[Stats.CRASHES] += 1
                         for oid in self.cache:
                             self.cache[oid] = None
@@ -224,14 +224,14 @@ if __name__ == '__main__':
             p.join()
     end = time.time()
 
-    print("wall time: %0.02fs" % (end - start))
-    print("stats:", Stats.to_str(stats[:]))
+    print(("wall time: %0.02fs" % (end - start)))
+    print(("stats:", Stats.to_str(stats[:])))
     sum = 0
     for oid in oids:
         blob, version = r.read(table, oid)
         value = int(blob)
         sum += value
-        print('oid %d: value=%d, version=%d' % (oid, value, version))
-    print('sum: %d' % sum)
+        print(('oid %d: value=%d, version=%d' % (oid, value, version)))
+    print(('sum: %d' % sum))
     assert sum == 0
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2011 Stanford University
 #
@@ -17,7 +17,7 @@
 """Generates data for graphing latency of different transports.
 """
 
-from __future__ import division, print_function
+
 from common import *
 import subprocess
 from collections import defaultdict

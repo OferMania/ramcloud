@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # Copyright (c) 2010-2014 Stanford University
 #
@@ -99,12 +99,12 @@ def replay(file, numPanesPerWindow = 4, logDir = None, dryrun = False):
     # Generate smux input instead
     if dryrun:
         SEP = '-' * 10
-        print "PANES_PER_WINDOW = %d" % numPanesPerWindow
-        print SEP
+        print("PANES_PER_WINDOW = %d" % numPanesPerWindow)
+        print(SEP)
         for server in finalCommands:
           for cmd in server:
-             print cmd
-          print SEP
+             print(cmd)
+          print(SEP)
         return
        
     smux.create(numPanesPerWindow, finalCommands)
@@ -130,7 +130,7 @@ def usage():
 
 
     '''
-    print doc_string
+    print(doc_string)
     sys.exit(1)
 
 def main():
@@ -139,7 +139,7 @@ def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'hp:d:n', ['help', 'panes=', 'logDir=', 'dryrun'])
     except getopt.GetoptError as err:
-        print str(err) # will print something like "option -a not recognized"
+        print(str(err)) # will print something like "option -a not recognized"
         usage()
         sys.exit(2)
 

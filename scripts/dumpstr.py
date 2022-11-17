@@ -16,12 +16,12 @@
 A library with which to upload reports to the dumpstr tool.
 """
 
-from __future__ import division, print_function
+
 
 import json
 import os
 import sys
-import urllib
+import urllib.request, urllib.parse, urllib.error
 
 class Dumpstr(object):
     """
@@ -91,14 +91,14 @@ class Dumpstr(object):
             json_trends = '[]'
         else:
             json_trends = json.dumps(trends)
-        post_data = urllib.urlencode({
+        post_data = urllib.parse.urlencode({
                 'type': type,
                 'owner': owner,
                 'data': json_data,
                 'trends': json_trends,
             })
         try:
-            response = urllib.urlopen(self.url + '/ajax/report/new', post_data)
+            response = urllib.request.urlopen(self.url + '/ajax/report/new', post_data)
         except IOError as e:
             raise self.UploadException(0, str(e))
         code = response.getcode()

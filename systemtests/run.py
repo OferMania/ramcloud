@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2012 Stanford University
 #
@@ -34,7 +34,7 @@ all the modules in the directory and looks for a 'suite' field. If it exists
 the tests in the suite are added and run.
 """
 
-from __future__ import division, print_function
+
 
 import sys
 import os

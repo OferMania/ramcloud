@@ -158,7 +158,7 @@ CC ?= gcc
 CXX ?= g++
 AR ?= gcc-ar
 PERL ?= perl
-PYTHON ?= python
+PYTHON ?= python3
 LINT := $(PYTHON) cpplint.py --filter=-runtime/threadsafe_fn,-readability/streams,-whitespace/blank_line,-whitespace/braces,-whitespace/comments,-runtime/arrays,-build/include_what_you_use,-whitespace/semicolon
 PRAGMAS := ./pragmas.py
 NULL := # useful for terminating lists of files
@@ -367,6 +367,7 @@ include src/MakefragClient
 include src/MakefragServer
 include src/MakefragCoordinator
 include src/MakefragTest
+include bindings/python/Makefrag
 include apps/MakefragApp
 include nanobenchmarks/MakefragNano
 

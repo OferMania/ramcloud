@@ -55,7 +55,7 @@ def timeout(secs=10):
                 signal.signal(signal.SIGALRM, old)
             signal.alarm(0)
             return result
-        new_f.func_name = f.func_name
+        new_f.__name__ = f.__name__
         return new_f
     return decorate
 

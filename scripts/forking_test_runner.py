@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2010 Stanford University
 #
 # Permission to use, copy, modify, and distribute this software for any
@@ -67,7 +67,7 @@ for name in os.listdir('src/'):
                 tests.append((suite, test))
                 continue
 
-print 'Running %d tests...' % len(tests)
+print('Running %d tests...' % len(tests))
 
 ok = 0
 failed = 0
@@ -86,13 +86,13 @@ for (suite, test) in tests:
         if rc is not None:
             break
         if now - start > FAIL_AFTER_SECONDS:
-            print "Killing %s::%s" % (suite, test)
+            print("Killing %s::%s" % (suite, test))
             process.kill()
             break
     if rc != 0:
         output = process.stdout.read().strip()
         if output == (ignore % test):
-            print "Ignored: RAMCloud::%s::%s" % (suite, test)
+            print("Ignored: RAMCloud::%s::%s" % (suite, test))
             continue
         if rc is None:
             why = ' by taking too long (over %ss)' % FAIL_AFTER_SECONDS
@@ -105,8 +105,8 @@ for (suite, test) in tests:
         cfh = cppunit_fail_header % (suite, test)
         if output.startswith(cfh):
             output = output[len(cfh):]
-        print '%s::%s failed%s%s\n' % (suite, test, why,
-                                     ':\n%s' % output if output else '')
+        print('%s::%s failed%s%s\n' % (suite, test, why,
+                                     ':\n%s' % output if output else ''))
         failed += 1
     else:
         if suite in suite_times:
@@ -120,24 +120,24 @@ for (suite, test) in tests:
             test_times[suite_test] = now - start
         ok += 1
 
-print '%d tests passed, %d failed' % (ok, failed)
+print('%d tests passed, %d failed' % (ok, failed))
 
 def print_timing(title, times, num=None):
-    print title
-    print '=' * len(title)
-    l = times.items()
+    print(title)
+    print('=' * len(title))
+    l = list(times.items())
     l.sort(key=lambda x: x[1], reverse=True)
     if num is not None:
         l = l[:num]
     max_name_length = max([len(name) for name, t in l])
     for name, t in l:
-        print '%s%s' % (name.ljust(max_name_length),
-                        ('%0.02fms' % (t * 1000)).rjust(8))
+        print('%s%s' % (name.ljust(max_name_length),
+                        ('%0.02fms' % (t * 1000)).rjust(8)))
 
 if len(sys.argv) > 1:
-    print
-    print 'Total time: %0.02fms' % (sum(suite_times.values()) * 1000)
-    print
+    print()
+    print('Total time: %0.02fms' % (sum(suite_times.values()) * 1000))
+    print()
     print_timing('Suite Timing', suite_times)
-    print
+    print()
     print_timing('Test Timing (top 20)', test_times, num=20)

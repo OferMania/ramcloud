@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2011 Stanford University
 #
@@ -20,7 +20,7 @@ Proportional scaling: keeps partition size constant and scales the number
 of recovery masters and backups.
 """
 
-from __future__ import division, print_function
+
 from common import *
 import config
 from ordereddict import OrderedDict
@@ -36,11 +36,11 @@ class AveragingDict(OrderedDict):
             OrderedDict.__getitem__(self, key).append(value)
     def __getitem__(self, key):
         value = OrderedDict.__getitem__(self, key)
-        return tuple(map(metrics.average, zip(*value)))
+        return tuple(map(metrics.average, list(zip(*value))))
 
 def write(data, filename):
     with open(filename, 'w') as f:
-        for x, ys in data.items():
+        for x, ys in list(data.items()):
             print(x, *ys, file=f)
 
 data = AveragingDict()

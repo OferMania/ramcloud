@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2011-2017 Stanford University
 #
@@ -34,7 +34,7 @@ benchmark.
 # 4. Create a new Test object in one of the tables simple_tests or
 #    graph_tests below, depending on the kind of test.
 
-from __future__ import division, print_function
+
 from common import *
 import cluster
 import collections
@@ -71,7 +71,7 @@ def flatten_args(args):
     in a command line, such as "--name1 value1 --name2 value2"
     """
     return " ".join(["%s %s" % (name, value)
-            for name, value in args.iteritems()])
+            for name, value in args.items()])
 
 def get_client_log(
         index = 1                 # Client index (1 for first client,
@@ -138,14 +138,14 @@ def print_percentiles_from_logs():
                             numGenSamples[size] += count
                         else:
                             samples.append(float(value))
-                    except ValueError, e:
+                    except ValueError as e:
                         # print("Skipping, couldn't parse %s" % line)
                         pass
 
     # Print the count and percentiles of each sample collection.
     print("#   Size   Samples       Min       Avg       50%       90%       99%     99.9%       Max\n"
           "#---------------------------------------------------------------------------------------")
-    for size, samples in samplesOfSize.iteritems():
+    for size, samples in samplesOfSize.items():
         samples.sort()
         length = len(samples)
         if length == 0:
@@ -189,7 +189,7 @@ def print_cdf_from_log(
             for value in line.split(","):
                 try:
                     numbers.append(float(value))
-                except ValueError, e:
+                except ValueError as e:
                     print("Skipping, couldn't parse %s" % line)
 
     # Generate a CDF from the array.
@@ -231,7 +231,7 @@ def print_rcdf_from_log(
             for value in line.split(","):
                 try:
                     numbers.append(float(value))
-                except ValueError, e:
+                except ValueError as e:
                     print("Skipping, couldn't parse %s" % line)
 
     # Generate a RCDF from the array.
@@ -285,7 +285,7 @@ def print_rcdf_from_log_samples(
             durationNs = line.split(' ')[2]
             try:
                 numbers.append(float(durationNs))
-            except ValueError, e:
+            except ValueError as e:
                 print("Skipping, couldn't parse %s" % line, file=sys.stderr)
 
     if len(numbers) == 0:

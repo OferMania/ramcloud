@@ -76,7 +76,7 @@ Driver's packet buffer. This would be similar to an auto_ptr in C++.
 
 def debug(s):
     if DEBUGGING:
-        print s
+        print(s)
 
 newObjects = []
 

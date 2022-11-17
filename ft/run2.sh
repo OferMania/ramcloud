@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-SERVER="python server.py"
-CLIENT="python client.py"
+SERVER="python3 server.py"
+CLIENT="python3 client.py"
 while getopts "sc" OPT; do
     case $OPT in
         s)

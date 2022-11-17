@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # Usage: compute_slowdown.py baseline_data experiment_data
 #
 # Compute echo RPC slowdowns by normalizing the actual RPC times aginst the
@@ -54,13 +54,13 @@ def main():
             total_samples += num_samples[size]
 
     # Print out RPC slowdowns
-    for size in sorted(num_samples.iterkeys()):
-        print("%s %s %s %8d %5d %10.7f %8.2f %8.2f %8.2f" % (experiment_name,
+    for size in sorted(num_samples.keys()):
+        print(("%s %s %s %8d %5d %10.7f %8.2f %8.2f %8.2f" % (experiment_name,
                 load_factor, workload, size, num_samples[size],
                 num_samples[size] / total_samples,
                 average[size] / rpc_time_min[size],
                 median[size] / rpc_time_min[size],
-                tail[size] / rpc_time_min[size]))
+                tail[size] / rpc_time_min[size])))
 
 if __name__ == '__main__':
     main()

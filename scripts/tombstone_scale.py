@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2011 Stanford University
 #
@@ -20,7 +20,7 @@ Keeps partition size constant and scales percentage of tombstones
 from 0-50% of the total partition size.
 """
 
-from __future__ import division, print_function
+
 from common import *
 import config
 import recovery

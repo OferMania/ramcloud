@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2011 Stanford University
 #
@@ -20,7 +20,7 @@ Measures recovery time as a function of partition size for a
 single recovery Master and 3 different object sizes.
 """
 
-from __future__ import division, print_function
+
 from common import *
 import config
 import recovery

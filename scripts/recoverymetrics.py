@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2011 Stanford University
 #
@@ -20,7 +20,7 @@ extracts performance metrics, and print a summary of interesting data
 from those metrics.
 """
 
-from __future__ import division, print_function
+
 from glob import glob
 from optparse import OptionParser
 from pprint import pprint
@@ -89,12 +89,12 @@ def parse(f):
                list[-1].server = start.group(1)
             continue;
         if len(list) == 0:
-            raise Exception, ('metrics data before "begin server" in %s'
+            raise Exception('metrics data before "begin server" in %s'
                               % f.name)
         var, value = info.split(' ')
         list[-1].assign(var, int(value))
     if len(list) == 0:
-        raise Exception, 'no metrics in %s' % f.name
+        raise Exception('no metrics in %s' % f.name)
     return list
 
 def maxTuple(tuples):

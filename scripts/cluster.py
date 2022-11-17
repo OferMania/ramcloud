@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2010-2016 Stanford University
 #
@@ -20,7 +20,7 @@ Used to exercise a RAMCloud cluster (e.g., for performance measurements)
 by running a collection of servers and clients.
 """
 
-from __future__ import division, print_function
+
 from common import *
 import config
 import itertools
@@ -201,7 +201,7 @@ class Cluster(object):
                 print ('Cluster name exists')
         else:
             self.cluster_name = 'cluster_' +  ''.join([chr(random.choice(
-                                 range(ord('a'), ord('z'))))
+                                 list(range(ord('a'), ord('z')))))
                                     for c in range(20)])
         if self.verbose:
             print ('Cluster name is %s' % (self.cluster_name))
@@ -687,10 +687,10 @@ def run(
 
         if not client:
             print('Servers started.')
-            raw_input('Type <Enter> to shutdown servers: ')
+            input('Type <Enter> to shutdown servers: ')
         elif debug:
             print('Servers started; pausing for debug setup.')
-            raw_input('Type <Enter> to continue: ')
+            input('Type <Enter> to continue: ')
 
         if client:
             # Note: even if it's OK to share hosts between clients and servers,

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2011-2013 Stanford University
 #
@@ -20,7 +20,7 @@ RAMCloud.  When executed, it generates two files, RawMetrics.in.h and
 RawMetrics.in.cc, which are included by other files when building RAMCloud.
 """
 
-from __future__ import division, print_function
+
 from glob import glob
 from optparse import OptionParser
 from pprint import pprint
@@ -43,7 +43,7 @@ class Counter:
     """
     def __init__(self):
         self.current = 0
-    def next(self):
+    def __next__(self):
         self.current += 1
     def value(self):
         return self.current
@@ -89,7 +89,7 @@ class Metric:
         out('        case %s:' % (counter.value()))
         out('            return {"%s",' % path)
         out('                    &%s};' % path)
-        counter.next()
+        next(counter)
 
 class Group:
     """A group of related performance metrics and subgroups.  Translates
