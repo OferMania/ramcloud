@@ -5,10 +5,10 @@ CAP_FILE=/tmp/x.cap
 sudo rm -f $CAP_FILE
 sudo dumpcap -a duration:$TIME -i lo -w $CAP_FILE &
 sleep .1
-python server.py &
+python3 server.py &
 SERVER_PID=$!
 sleep .1
-python client.py &
+python3 client.py &
 CLIENT_PID=$!
 trap "kill $SERVER_PID; kill $CLIENT_PID" exit
 sleep $TIME

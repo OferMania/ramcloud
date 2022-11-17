@@ -1,11 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Stand-alone script which reads a CSV file of data measurements (specified on
 the command line) and generates a textual cdf, printed to standard out.
 """
 
-from __future__ import division, print_function
+
 from sys import argv,exit
 import re
 

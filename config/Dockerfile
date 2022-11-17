@@ -25,7 +25,6 @@ RUN apt-get update \
       pipenv \
       procps \
       protobuf-compiler \
-      python2.7 `#TODO: Needed to build RAMCloud cpp, but hopefully not for long...` \
       python3 \
       python3-pip \
       software-properties-common \
@@ -36,9 +35,6 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
  && pip3 install pipenv
-
-# TODO: Needed to build RAMCloud cpp, but hopefully not for long...
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python2.7 1
 
 # Install python3 pip packages and logging for talking with ramcloud-test
 RUN mkdir --parent /tmp/pip \
@@ -60,9 +56,7 @@ RUN curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add - \
 ENV PYTHONPATH=/src/ramcloud/bindings/python:/src/ramcloud/localcluster/src:/src/ramcloud/localcluster/testing
 ENV LD_LIBRARY_PATH=/src/ramcloud/install/lib
 
-# TODO: this version of google test is antiquated but required.
-# We can't compile against the curent version (1.11) at the moment.
-ENV GTEST_VERSION=1.10.0
+ENV GTEST_VERSION=1.12.1
 RUN cd /usr/include \
  && wget \
      --quiet \
@@ -74,3 +68,5 @@ RUN cd /usr/include \
  && cmake -GNinja -DBUILD_SHARED_LIBS=ON .. \
  && ninja \
  && ninja install
+
+ENV GTEST_DIR="/usr/include/googletest-release-${GTEST_VERSION}/googletest"

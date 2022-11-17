@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2011 Stanford University
 #
@@ -16,7 +16,7 @@
 
 """Uploads a report to dumpstr with statistics about the git repo."""
 
-from __future__ import division, print_function
+
 
 from collections import defaultdict
 import random
@@ -131,7 +131,7 @@ def blame(filename):
             continue
 
     author_to_num_lines = defaultdict(int)
-    for commit, num_lines in commit_to_num_lines.items():
+    for commit, num_lines in list(commit_to_num_lines.items()):
         author = commit_to_author[commit]
         author_to_num_lines[author] += num_lines
     return author_to_num_lines
@@ -150,7 +150,7 @@ def get_commits_by_author():
     made."""
 
     output = captureSh('git log --pretty=format:%an').split('\n')
-    return seq_to_freq(map(Author.get, output))
+    return seq_to_freq(list(map(Author.get, output)))
 
 if __name__ == '__main__':
 
@@ -190,7 +190,7 @@ if __name__ == '__main__':
 
     # Lines of code, broken up by file type
     filetype_to_loc = defaultdict(int)
-    for filename, author_to_num_lines in blame_data.items():
+    for filename, author_to_num_lines in list(blame_data.items()):
         filetype = FileType.get(filename)
         loc = sum(author_to_num_lines.values())
         filetype_to_loc[filetype] += loc
@@ -216,21 +216,21 @@ if __name__ == '__main__':
     # Lines of code by author, broken up by file type
     # map from author to (map from type to lines of code)
     loc_by_author_type = defaultdict(FileType.make_filetype_to_int_map)
-    for filename, author_to_num_lines in blame_data.items():
+    for filename, author_to_num_lines in list(blame_data.items()):
         filetype = FileType.get(filename)
-        for author, num_lines in author_to_num_lines.items():
+        for author, num_lines in list(author_to_num_lines.items()):
             loc_by_author_type[author][filetype] += num_lines
     loc_by_author_lines = []
     report.append({'key': 'Lines of code by author',
                    'lines': loc_by_author_lines})
-    for author, loc_by_type in sorted(loc_by_author_type.items(),
+    for author, loc_by_type in sorted(list(loc_by_author_type.items()),
                                       key=lambda x: sum(x[1].values()),
                                       reverse=True):
         loc_by_author_lines.append({
             'key': author,
             'summary': ['% 6d  total' % sum(loc_by_type.values()),
                         '% 6d source' % loc_by_type['source']],
-            'points': loc_by_type.items(),
+            'points': list(loc_by_type.items()),
             'unit': ''
         })
 
@@ -238,7 +238,7 @@ if __name__ == '__main__':
     commits_by_author_lines = []
     report.append({'key': 'Commits by author',
                    'lines': commits_by_author_lines})
-    for author, count in sorted(commits_by_author.items(),
+    for author, count in sorted(list(commits_by_author.items()),
                                key=second, reverse=True):
         commits_by_author_lines.append({'key': author,
                                         'summary': count,

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # Copyright (c) 2010-2014 Stanford University
 #
@@ -34,7 +34,7 @@ def create(serverRanges, superuser):
        if '-' in serverRange:
           left,right = serverRange.split("-")
           left,right = int(left),int(right)
-          for x in xrange(left, right + 1):
+          for x in range(left, right + 1):
             if superuser:
               servers.append(["ssh root@rc%02d" % x])
             else:
@@ -62,7 +62,7 @@ def usage():
 
 
     '''
-    print doc_string
+    print(doc_string)
     sys.exit(1)
 
 def main():
@@ -71,7 +71,7 @@ def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'hs', ['help', 'superuser'])
     except getopt.GetoptError as err:
-        print str(err)
+        print(str(err))
         usage()
         sys.exit(2)
 

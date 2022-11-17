@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2015-2016 Stanford University
 #
@@ -20,7 +20,7 @@ call depth to each RPC opcode, in order to avoid distributed deadlocks.
 This program should be run from the top-level RAMCloud source directory.
 """
 
-from __future__ import division, print_function
+
 from glob import glob
 from optparse import OptionParser
 import math
@@ -137,7 +137,7 @@ if error:
 
 # Compute the calling level for each RPC, in multiple passes. In the
 # first pass, find all leaf RPCs (those not listed in callees).
-for op in opcodes.keys():
+for op in list(opcodes.keys()):
     if not op in callees:
         levels[op] = 0
         # print("%-25s: level 0" % (op))
@@ -150,7 +150,7 @@ while (passCount < 20) and not finished:
     finished = True
 
     # Check all opcodes for which a level has not yet been assigned
-    for op in opcodes.keys():
+    for op in list(opcodes.keys()):
         if op in levels:
             continue
         level = 0
@@ -173,7 +173,7 @@ while (passCount < 20) and not finished:
 if not finished:
     # If we get here it means that there is a circularity in the call graph.
     # Print out the opcodes that don't yet have assigned levels.
-    for op in opcodes.keys():
+    for op in list(opcodes.keys()):
         if not op in levels:
             sys.stderr.write("Couldn't assign level for %s: circularity "
                     "in call graph?\n" % (op))

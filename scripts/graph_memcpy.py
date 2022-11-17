@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2011 Stanford University
 #
@@ -20,7 +20,7 @@ Graphs will be dropped into a memcpy/ directory by default, which can be
 overridden by specifying a name on the command line.
 """
 
-from __future__ import division
+
 from common import *
 import errno
 import os
@@ -39,7 +39,7 @@ else:
 
 try:
     os.mkdir(dirname)
-except OSError, e:
+except OSError as e:
     if e.errno != errno.EEXIST:
         raise
 
@@ -78,16 +78,16 @@ for line in lines:
                          float(cbytes) / float(cmin) * (10**9 / 2**30),
                          float(cbytes) / float(cmax) * (10**9 / 2**30)))
         continue
-    raise Exception, line
+    raise Exception(line)
 
-for label, points in data.items():
+for label, points in list(data.items()):
     dat = open('%s/%s.dat' % (dirname, label.lower()), 'w')
     for point in points:
         dat.write('%s\n' % '\t'.join(map(str, point)))
     dat.close()
 for name, columns in [('absolute', '1:2:3:4'), ('bandwidth', '1:5:6:7')]:
     cmds = []
-    for label in data.keys():
+    for label in list(data.keys()):
         cmds.append(('"%s.dat" using %s title "%s" with yerrorlines' %
                      (label.lower(), columns, label)))
     gnu = open('%s/%s.gnu' % (dirname, name), 'w')
@@ -97,9 +97,9 @@ for name, columns in [('absolute', '1:2:3:4'), ('bandwidth', '1:5:6:7')]:
 cmd = 'cd %s; gnuplot %s/scripts/graph_memcpy.gnu' % (dirname, os.getcwd())
 try:
     if float(captureSh('gnuplot --version').split()[1]) < 4.2:
-        raise Exception, "gnuplot version too old"
+        raise Exception("gnuplot version too old")
 except:
-    print 'Run the following command with a recent version of gnuplot:'
-    print cmd
+    print('Run the following command with a recent version of gnuplot:')
+    print(cmd)
 else:
     sh(cmd)

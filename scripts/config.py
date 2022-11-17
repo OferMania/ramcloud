@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2011 Stanford University
 #
 # Permission to use, copy, modify, and distribute this software for any
@@ -131,4 +131,4 @@ except ImportError:
 
 if __name__ == '__main__':
     import common
-    print('\n'.join([s[0] for s in common.getHosts()]))
+    print(('\n'.join([s[0] for s in common.getHosts()])))

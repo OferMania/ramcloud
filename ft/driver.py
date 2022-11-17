@@ -64,4 +64,4 @@ class UDPDriver(Driver):
         self._packetBufsUtilized -= 1
 
     def stat(self):
-        print 'Driver: packetBufsUtilized = %d' % self._packetBufsUtilized
+        print('Driver: packetBufsUtilized = %d' % self._packetBufsUtilized)

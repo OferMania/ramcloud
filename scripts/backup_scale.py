@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2011 Stanford University
 #
@@ -19,7 +19,7 @@
 Varies the number of backups feeding data to one recovery master.
 """
 
-from __future__ import division, print_function
+
 from common import *
 import config
 import metrics

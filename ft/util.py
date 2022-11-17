@@ -38,7 +38,7 @@ class BitVector(object):
         if seq is not None:
             assert len(seq) == (length + 7) / 8, (length, seq)
             if type(seq[0]) == str:
-                self.byteArray = map(ord, seq)
+                self.byteArray = list(map(ord, seq))
             else:
                 self.byteArray = seq[:]
         else:

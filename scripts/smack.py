@@ -11,7 +11,7 @@ class rpcperf():
         self.rpcs = 0
 
     def __del__(self):
-        print ""
+        print("")
 
     def before(self):
         self.before_time = time.time()
@@ -26,8 +26,8 @@ class rpcperf():
         self.total_time += diff
 
         if (ntime - self.last_report_time) >= 1.0:
-            print "%60s" % ("") ,
-            print "\r%.2f RPCs/sec (%.2f usec/RPC)" % (self.rpcs / self.total_time, 1.0e6 / (self.rpcs / self.total_time)) ,
+            print("%60s" % (""), end=' ')
+            print("\r%.2f RPCs/sec (%.2f usec/RPC)" % (self.rpcs / self.total_time, 1.0e6 / (self.rpcs / self.total_time)), end=' ')
             sys.stdout.flush()
             self.rpcs = 0
             self.total_time = 0
@@ -274,32 +274,32 @@ def main():
 
     smacks = options.smacks
 
-    print 'Connecting to %s' % options.coordinatorLocator
-    print "Using %d iterations/test" % smacks
+    print('Connecting to %s' % options.coordinatorLocator)
+    print("Using %d iterations/test" % smacks)
 
     c = ramcloud.RAMCloud()
     c.connect(options.coordinatorLocator)
     c.create_table("test")
 
-    print "Running cleaner consistency smack"
+    print("Running cleaner consistency smack")
     cleaner_consistency_smack(c, smacks)
 
-    print "Running version smack"
+    print("Running version smack")
     version_smack(c, smacks)
 
-    print "Running rewrite smack"
+    print("Running rewrite smack")
     rewrite_smack(c, smacks)
 
-    print "Running delete smack"
+    print("Running delete smack")
     delete_smack(c, smacks)
 
-    print "Running random rewrite/delete smack p = 0.3"
+    print("Running random rewrite/delete smack p = 0.3")
     rewrite_delete_smack(c, smacks, 0.3)
 
-    print "Running random rewrite/delete smack p = 0.5"
+    print("Running random rewrite/delete smack p = 0.5")
     rewrite_delete_smack(c, smacks, 0.5)
 
-    print "Running random rewrite/delete smack p = 0.8"
+    print("Running random rewrite/delete smack p = 0.8")
     rewrite_delete_smack(c, smacks, 0.8)
 
 if __name__ == '__main__':

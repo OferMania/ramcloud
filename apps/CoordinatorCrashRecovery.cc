@@ -446,7 +446,7 @@ startServer(struct localState *state)
      */
     char locator[50];
 
-    FILE *fp = popen((const char *) "python ../scripts/startserver.py"
+    FILE *fp = popen((const char *) "python3 ../scripts/startserver.py"
                 " -d ./logs/shm &", "r");
     if (!fp) {
         RAMCLOUD_LOG(ERROR,
@@ -503,7 +503,7 @@ killServer(struct localState *state, const char* serverLocator)
 {
     char st[100];
     RAMCLOUD_LOG(ERROR, "KILLING SERVER AT %s", serverLocator);
-    snprintf(st, sizeof(st), "python crashserver.py -l %s &", serverLocator);
+    snprintf(st, sizeof(st), "python3 crashserver.py -l %s &", serverLocator);
     if (system(reinterpret_cast<char *>(st))) {
         RAMCLOUD_LOG(ERROR, "Error invoking crashserver.py");
         return;
