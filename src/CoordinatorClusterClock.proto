@@ -13,7 +13,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-syntax = "proto2";
+syntax = "proto3";
 
 package RAMCloud.ProtoBuf;
 
@@ -26,5 +26,5 @@ message CoordinatorClusterClock {
     /// the event of a coordinator crash, the new coordinator can ensure the
     /// monotonic property of Cluster Time.  This time is periodically moved
     /// forward so so that the CoordinatorClusterClock can continue to progress.
-    required uint64 next_safe_time = 1;
+    uint64 next_safe_time = 1;
 }

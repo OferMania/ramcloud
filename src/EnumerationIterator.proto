@@ -13,7 +13,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-syntax = "proto2";
+syntax = "proto3";
 
 package RAMCloud.ProtoBuf;
 
@@ -23,19 +23,19 @@ message EnumerationIterator {
   /// See RAMCloud::EnumerationIterator::Frame.
   message Frame {
     /// See RAMCloud::EnumerationIterator::Frame::tabletStartHash.
-    required uint64 tablet_start_hash = 1;
+    uint64 tablet_start_hash = 1;
 
     /// See RAMCloud::EnumerationIterator::Frame::tabletEndHash.
-    required uint64 tablet_end_hash = 2;
+    uint64 tablet_end_hash = 2;
 
     /// See RAMCloud::EnumerationIterator::Frame::numBuckets.
-    required uint64 num_buckets = 3;
+    uint64 num_buckets = 3;
 
     /// See RAMCloud::EnumerationIterator::Frame::bucketIndex.
-    required uint64 bucket_index = 4;
+    uint64 bucket_index = 4;
 
     /// See RAMCloud::EnumerationIterator::Frame::bucketNextHash.
-    required uint64 bucket_next_hash = 5;
+    uint64 bucket_next_hash = 5;
   }
 
   /// See RAMCloud::EnumerationIterator::frames.

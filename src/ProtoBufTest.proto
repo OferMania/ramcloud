@@ -15,10 +15,10 @@
 
 // used in ProtoBufTest.cc
 
-syntax = "proto2";
+syntax = "proto3";
 
 package RAMCloud.ProtoBuf;
 
 message TestMessage {
-  required string foo = 1;
+  string foo = 1;
 }

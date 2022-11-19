@@ -13,7 +13,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-syntax = "proto2";
+syntax = "proto3";
 
 package RAMCloud.ProtoBuf;
 
@@ -28,21 +28,21 @@ message ServerStatistics {
   // ServerStatistics where its access statistics are being stored.
   message TabletEntry {
     /// The id of the containing table.
-    required uint64 table_id = 1;
+    uint64 table_id = 1;
 
     /// The smallest hash value for a key that is in this tablet.
-    required uint64 start_key_hash = 2;
+    uint64 start_key_hash = 2;
 
     /// The largest hash value for a key that is in this tablet.
-    required uint64 end_key_hash = 3;
+    uint64 end_key_hash = 3;
 
-    /// Read and write access statistics for a single tablet.
-    optional uint64 number_read_and_writes = 4 [default = 0];
+    /// optional: Read and write access statistics for a single tablet.
+    uint64 number_read_and_writes = 4;
   }
 
   /// List of TabletEntries.
   repeated TabletEntry tabletentry = 1;
 
   /// Stats on all SpinLock instances, to monitor contention.
-  required SpinLockStatistics spin_lock_stats = 2;
+  SpinLockStatistics spin_lock_stats = 2;
 }

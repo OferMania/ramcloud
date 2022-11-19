@@ -13,7 +13,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-syntax = "proto2";
+syntax = "proto3";
 
 package RAMCloud.ProtoBuf;
 
@@ -25,10 +25,10 @@ message Table {
 
   /// The table's name, as specified in the createTable RPC that
   /// created the table.
-  required string name = 1;
+  string name = 1;
 
   /// Identifier for the table (used in RPCs such as read and write).
-  required uint64 id = 2;
+  uint64 id = 2;
 
   /// Each message of this type holds information about one tablet in the
   /// table.
@@ -45,26 +45,26 @@ message Table {
     }
 
     /// The smallest hash value for a key that is in this tablet.
-    required uint64 start_key_hash = 1;
+    uint64 start_key_hash = 1;
 
     /// The largest hash value for a key that is in this tablet.
-    required uint64 end_key_hash = 2;
+    uint64 end_key_hash = 2;
 
     /// The state of the tablet, see above.
-    required State state = 3;
+    State state = 3;
 
     /// The ID of the master owning this tablet.
-    required fixed64 server_id = 4;
+    fixed64 server_id = 4;
 
     /// Id of the head segment in the log of server_id at the time the
     /// tablet was assigned to the server. Any earlier segments in the
     /// master's log cannot contain data belonging to this tablet.
-    required uint64 ctime_log_head_id = 5;
+    uint64 ctime_log_head_id = 5;
 
     /// Offset in the head segment of server_id's log at the time it was
     /// assigned this tablet. Any objects appearing earlier in that segment
     /// cannot contain data belonging to this tablet.
-    required uint32 ctime_log_head_offset = 6;
+    uint32 ctime_log_head_offset = 6;
   }
 
   /// The tablets.
@@ -76,86 +76,86 @@ message Table {
 
   /// Sequence number for the most recent update. 0 means the most
   /// recent update does not have any recovery-related issues.
-  required uint64 sequence_number = 4;
+  uint64 sequence_number = 4;
 
-  /// If this value is present, it is true, indicating that the most
-  /// recent update was to create the table.
-  optional bool created = 5;
+  /// optional: If this value is present, it is true, indicating that
+  /// the most recent update was to create the table.
+  bool created = 5;
 
-  /// If this value is present, it is true, indicating that the most
-  /// recent update was to delete the table.
-  optional bool deleted = 6;
+  /// optional: If this value is present, it is true, indicating that
+  /// the most recent update was to delete the table.
+  bool deleted = 6;
 
-  /// A message of this type is present if the most recent update was
-  /// to split a tablet in the table.
+  /// optional: A message of this type is present if the most recent
+  /// update was to split a tablet in the table.
   message Split {
     /// The ID of the master owning the tablet that was split.
-    required fixed64 server_id = 1;
+    fixed64 server_id = 1;
 
     /// Key hash value of the split point.
-    required uint64 split_key_hash = 2;
+    uint64 split_key_hash = 2;
   }
-  optional Split split = 7;
+  Split split = 7;
 
-  /// A message of this type is present if the most recent update was
-  /// to reassign a tablet.
+  /// optional: A message of this type is present if the most recent
+  /// update was to reassign a tablet.
   message Reassign {
     /// ID of the server to which the tablet was reassigned.
-    required fixed64 server_id = 1;
+    fixed64 server_id = 1;
 
     /// Key hash range for the reassigned tablet.
-    required uint64 start_key_hash = 2;
-    required uint64 end_key_hash = 3;
+    uint64 start_key_hash = 2;
+    uint64 end_key_hash = 3;
   }
-  optional Reassign reassign = 8;
+  Reassign reassign = 8;
 
   /// Each message of this type holds information about an index corresponding
   /// to this table.
   message Index {
     /// ID for the particular secondary index.
-    required uint32 index_id = 1;
+    uint32 index_id = 1;
 
     /// Each message of this types holds information about an indexlet
     /// that is part of this index.
     message Indexlet {
       /// Key blob marking the start of the indexed key range for this indexlet.
-      required string first_key = 1;
+      string first_key = 1;
 
       /// Blob of the smallest key in the given index that is after firstKey
       /// in the index order but not part of this indexlet.
-      required string first_not_owned_key = 2;
+      string first_not_owned_key = 2;
 
       /// ID of the backing table that will hold objects for this indexlet.
       /// This table will have only one tablet that is entirely owned by one
       /// server. It will never be partitioned into tablets across different
       /// servers.
-      required uint64 backing_table_id = 3;
+      uint64 backing_table_id = 3;
 
       /// ID of the master owning the table with ID backing_table_id.
-      required fixed64 server_id = 4;
+      fixed64 server_id = 4;
     }
     repeated Indexlet indexlet = 2;
   }
   repeated Index index = 9;
 
-  /// A message of this type is present if the most recent update was
-  /// to reassign an indexlet.
+  /// optional: A message of this type is present if the most recent
+  /// update was to reassign an indexlet.
   message ReassignIndexlet {
     /// ID of the server to which the indexlet was reassigned.
-    required fixed64 server_id = 1;
+    fixed64 server_id = 1;
 
     /// ID of the secondary index to which this indexlet belongs.
-    required uint32 index_id = 2;
+    uint32 index_id = 2;
 
     /// Key range for this indexlet.
-    required bytes first_key = 3;
-    required bytes first_not_owned_key = 4;
+    bytes first_key = 3;
+    bytes first_not_owned_key = 4;
 
     /// ID of the backing table that will hold objects for this indexlet.
     /// This table will have only one tablet that is entirely owned by one
     /// server. It will never be partitioned into tablets across different
     /// servers.
-    required uint64 backing_table_id = 5;
+    uint64 backing_table_id = 5;
   }
-  optional ReassignIndexlet reassign_indexlet = 10;
+  ReassignIndexlet reassign_indexlet = 10;
 }

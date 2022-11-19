@@ -13,7 +13,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-syntax = "proto2";
+syntax = "proto3";
 
 package RAMCloud.ProtoBuf;
 
@@ -22,5 +22,5 @@ package RAMCloud.ProtoBuf;
 message TableManager {
 
     /// The smallest table id that is guaranteed never to have been used.
-    required uint64 next_table_id = 1;
+    uint64 next_table_id = 1;
 }

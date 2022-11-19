@@ -13,7 +13,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-syntax = "proto2";
+syntax = "proto3";
 
 package RAMCloud.ProtoBuf;
 
@@ -24,18 +24,18 @@ message SpinLockStatistics {
     /// See SpinLock.h.
     message Lock {
         /// String name of the SpinLock.
-        required string name = 1;
+        string name = 1;
 
         /// Number of times the lock has been acquired.
-        required fixed64 acquisitions = 2;
+        fixed64 acquisitions = 2;
 
         /// Number of times the lock has been acquired, but only after having
         /// to spin wait first.
-        required fixed64 contended_acquisitions = 3;
+        fixed64 contended_acquisitions = 3;
 
         /// Total number of nanoseconds spent waiting to acquire the lock when
         /// it was already held.
-        required fixed64 contended_nsec = 4;
+        fixed64 contended_nsec = 4;
     }
     repeated Lock locks = 1;
 }
