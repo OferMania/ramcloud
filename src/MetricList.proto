@@ -13,7 +13,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-syntax = "proto2";
+syntax = "proto3";
 
 package RAMCloud.ProtoBuf;
 
@@ -23,9 +23,9 @@ message MetricList {
   /// An individual metric.
   message Entry {
     /// The name for this metric, such as "master.replicas".
-    required string name = 1;
+    string name = 1;
     /// Current value for the metric.
-    required uint64 value = 2;
+    uint64 value = 2;
   }
   /// The full list of metrics.
   repeated Entry metric = 1;

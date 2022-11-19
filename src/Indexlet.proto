@@ -13,7 +13,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-syntax = "proto2";
+syntax = "proto3";
 
 package RAMCloud.ProtoBuf;
 
@@ -21,26 +21,26 @@ package RAMCloud.ProtoBuf;
 
 message Indexlet {
   ///The id of the containing table
-  required uint64 table_id = 1;
+  uint64 table_id = 1;
 
   ///The id of the index
-  required uint32 index_id = 2;
+  uint32 index_id = 2;
 
   ///The id of the table that will hold objects for this indexlet.
-  required uint64 backing_table_id = 3;
+  uint64 backing_table_id = 3;
 
-  ///The first (smallest) key that is part of this indexlet.
-  optional bytes first_key = 4;
+  ///optional: The first (smallest) key that is part of this indexlet.
+  bytes first_key = 4;
 
-  ///The smallest key greater than all the keys managed by this indexlet.
-  optional bytes first_not_owned_key = 5;
+  ///optional: The smallest key greater than all the keys managed by this indexlet.
+  bytes first_not_owned_key = 5;
 
-  /// The id of the master owning this indexlet.
-  optional fixed64 server_id = 6;
+  ///optional:  The id of the master owning this indexlet.
+  fixed64 server_id = 6;
 
-  /// The service locator for the master owning this indexlet.
-  optional string service_locator = 7;
+  ///optional:  The service locator for the master owning this indexlet.
+  string service_locator = 7;
 
-  /// User data
-  optional fixed64 user_data = 8;
+  ///optional:  User data
+  fixed64 user_data = 8;
 }

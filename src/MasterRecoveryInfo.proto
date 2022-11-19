@@ -13,7 +13,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-syntax = "proto2";
+syntax = "proto3";
 
 package RAMCloud.ProtoBuf;
 
@@ -42,20 +42,20 @@ package RAMCloud.ProtoBuf;
  */
 message MasterRecoveryInfo {
     /**
+     * optional:
      * Minimum segment id which a replica must have to be a valid replica of
      * the log *IF* the replica is open (subject to the constraint of the
      * #min_open_segment_epoch below). Closed replicas are always valid.
-     * Note: making this optional with a default value avoids the need to
-     * explicitly initialize in CoordinatorServerList.cc, so it doesn't
-     * have to understand what's in these protobufs.
+     * Note: this field has zero as default.
      */
-    optional uint64 min_open_segment_id = 1 [default = 0];
+    uint64 min_open_segment_id = 1;
 
     /**
+     * optional:
      * Minimum epoch a replica must have *IF* the replica is open *AND* the
-     * segment id is exactly the same as above.  See note above about
-     * optional/default.
+     * segment id is exactly the same as above. Note: this field has zero
+     * as default.
      */
-    optional uint64 min_open_segment_epoch = 2 [default = 0];
+    uint64 min_open_segment_epoch = 2;
 }
 

@@ -736,7 +736,7 @@ TableManager::recover(uint64_t lastCompletedUpdate)
         // Regenerate our internal information for the table, unless the
         // table has been deleted.
         Table* table = NULL;
-        if (!info.has_deleted()) {
+        if (!info.deleted()) {
             table = recreateTable(lock, &info);
         }
 
@@ -747,10 +747,10 @@ TableManager::recover(uint64_t lastCompletedUpdate)
 
         // The last metadata update for this table may not have completed.
         // Check for each possible update and clean up appropriately.
-        if (info.has_created()) {
+        if (info.created()) {
             notifyCreate(lock, table);
         }
-        if (info.has_deleted()) {
+        if (info.deleted()) {
             notifyDropTable(lock, &info);
         }
         if (info.has_split()) {

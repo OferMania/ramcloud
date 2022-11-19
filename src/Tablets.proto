@@ -13,7 +13,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-syntax = "proto2";
+syntax = "proto3";
 
 package RAMCloud.ProtoBuf;
 
@@ -29,35 +29,35 @@ message Tablets {
     }
 
     /// The id of the containing table.
-    required uint64 table_id = 1;
+    uint64 table_id = 1;
 
     /// The smallest hash value for a key that is in this tablet.
-    required uint64 start_key_hash = 2;
+    uint64 start_key_hash = 2;
 
     /// The largest hash value for a key that is in this tablet.
-    required uint64 end_key_hash = 3;
+    uint64 end_key_hash = 3;
 
     /// The state of the tablet, see above.
-    required State state = 4;
+    State state = 4;
 
-    /// The ID of the master owning this tablet.
-    optional fixed64 server_id = 5;
+    /// optional: The ID of the master owning this tablet.
+    fixed64 server_id = 5;
 
-    /// The service locator for the master owning this tablet.
-    optional string service_locator = 6;
+    /// optional: The service locator for the master owning this tablet.
+    string service_locator = 6;
 
-    /// An opaque field which happens to be large enough for a pointer.
-    optional fixed64 user_data = 7;
+    /// optional: An opaque field which happens to be large enough for a pointer.
+    fixed64 user_data = 7;
 
     /// Id of the the log head belonging to the master that owns this
     /// tablet when it was assigned to the server. Any earlier segments
     /// cannot contain data belonging to this tablet.
-    required uint64 ctime_log_head_id = 8;
+    uint64 ctime_log_head_id = 8;
 
     /// Offset in the log head segment belonging to the master that owns this
     /// tablet when it was assigned to the server. Any objects appearing
     /// earlier in that segment cannot contain data belonging to this tablet.
-    required uint32 ctime_log_head_offset = 9;
+    uint32 ctime_log_head_offset = 9;
   }
 
   /// The tablets.

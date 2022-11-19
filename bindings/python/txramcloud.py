@@ -102,7 +102,7 @@ TXID_RES_OID = 2**64 - 1
 
 def serialize(data):
     """Pickle some Python object."""
-    return pickle.dumps(data, protocol=2)
+    return pickle.dumps(data, protocol=3)
 
 def unserialize(serialized):
     """Unpickle some serialized Python object."""
