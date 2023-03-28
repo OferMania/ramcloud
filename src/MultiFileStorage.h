@@ -17,6 +17,7 @@
 #define RAMCLOUD_MULTIFILESTORAGE_H
 
 #include <stack>
+#include <stdio.h>
 
 #include "Common.h"
 #include "BackupStorage.h"
@@ -321,7 +322,7 @@ class MultiFileStorage : public BackupStorage {
      * The file descriptors of the storage files. See bytesInFramelet() for
      * details on how data is divided between files.
      */
-    std::vector<int> fds;
+    std::vector<::FILE*> fds;
 
     /// Set to true if the filePath issued to the constructor was "/dev/null".
     /// We need to keep track of this since /dev/null will readily take any

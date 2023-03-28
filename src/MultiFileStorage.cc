@@ -14,6 +14,7 @@
  */
 
 #include <aio.h>
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -173,13 +174,17 @@ void
 MultiFileStorage::Frame::loadMetadata()
 {
     const size_t metadataStart = storage->offsetOfFrameMetadata(frameIndex);
-    ssize_t r = pread(storage->fds[0], appendedMetadata.get(), METADATA_SIZE,
-                      metadataStart);
-    if (r == -1) {
+    int seek_status = ::fseek(storage->fds[0], metadataStart, SEEK_SET);
+    if (seek_status < 0) {
+        RAMCLOUD_CLOG(WARNING, "lseek for frame %lu yields: %s",
+            frameIndex, strerror(errno));
+    }
+    size_t r = ::fread(appendedMetadata.get(), 1, METADATA_SIZE, storage->fds[0]);
+    if (r == 0) {
         DIE("Failed to read metadata stored in frame %lu: %s, "
             "starting offset %lu, length %d",
             frameIndex, strerror(errno), metadataStart, METADATA_SIZE);
-    } else if (r != METADATA_SIZE) {
+    } else if (r < METADATA_SIZE) {
         DIE("Failed to read metadata stored in frame %lu: reached end of "
             "file, starting offset %lu, length %d",
             frameIndex, metadataStart, METADATA_SIZE);
@@ -579,7 +584,7 @@ MultiFileStorage::unlockedRead(Frame::Lock& lock, void* buf, size_t frameIndex,
     for (size_t fileIndex = 0; fileIndex < fds.size(); fileIndex++) {
         size_t frameletSize = bytesInFramelet(fileIndex);
         struct aiocb* cb = &cbs[fileIndex];
-        cb->aio_fildes = fds[fileIndex];
+        cb->aio_fildes = ::fileno(fds[fileIndex]);
         cb->aio_offset = frameletStart;
         cb->aio_buf = static_cast<char*>(buf) + (frameletSize * fileIndex);
         cb->aio_nbytes = frameletSize;
@@ -668,7 +673,7 @@ MultiFileStorage::unlockedWrite(Frame::Lock& lock, void* buf, size_t count,
         size_t bytesToWrite = std::min(frameletSize - offsetInFramelet,
                                        remaining);
         struct aiocb* cb = &cbs[fileIndex];
-        cb->aio_fildes = fds[fileIndex];
+        cb->aio_fildes = ::fileno(fds[fileIndex]);
         cb->aio_offset = frameletStart + offsetInFramelet;
         cb->aio_buf = buf;
         cb->aio_nbytes = bytesToWrite;
@@ -681,7 +686,7 @@ MultiFileStorage::unlockedWrite(Frame::Lock& lock, void* buf, size_t count,
 
     // Metadata gets its own IO operation.
     struct aiocb* metadataCb = &cbs[fds.size()];
-    metadataCb->aio_fildes = fds[0];
+    metadataCb->aio_fildes = ::fileno(fds[0]);
     metadataCb->aio_offset = offsetOfFrameMetadata(frameIndex);
     metadataCb->aio_buf = metadataBuf;
     metadataCb->aio_nbytes = metadataCount;
@@ -969,8 +974,8 @@ MultiFileStorage::MultiFileStorage(size_t segmentSize,
         }
         std::string filePath = filePathsCopy.substr(filePathIndex,
                                                     commaIndex - filePathIndex);
-        int fd = ::open(filePath.c_str(), O_CREAT | O_RDWR | openFlags, 0666);
-        if (fd == -1) {
+        ::FILE* fd = ::fopen(filePath.c_str(), "w+");
+        if (!fd) {
             int e = errno;
             LOG(ERROR, "Failed to open backup storage file %s: %s",
                 filePath.c_str(), strerror(e));
@@ -987,7 +992,7 @@ MultiFileStorage::MultiFileStorage(size_t segmentSize,
         if (r == -1)
             continue;
         if (st.st_mode & S_IFREG)
-            reserveSpace(fd);
+            reserveSpace(::fileno(fd));
 
         filePathIndex = commaIndex + 1;
     }
@@ -1028,7 +1033,7 @@ MultiFileStorage::~MultiFileStorage()
     ioQueue.halt();
 
     for (size_t i = 0; i < fds.size(); i++) {
-        int r = close(fds[i]);
+        int r = ::fclose(fds[i]);
         if (r == -1)
             LOG(ERROR, "Couldn't close backup log");
     }
@@ -1245,18 +1250,25 @@ MultiFileStorage::resetSuperblock(ServerId serverId,
         const uint32_t nextFrame = (lastSuperblockFrame + 1) % 2;
         if (!((frameSkipMask >> nextFrame) & 0x01)) {
             const uint64_t offset = offsetOfSuperblockFrame(nextFrame);
-            ssize_t r = pwrite(fds[0], block.get(), BLOCK_SIZE, offset);
+            int seek_status = ::fseek(fds[0], offset, SEEK_SET);
+            if (seek_status < 0) {
+                RAMCLOUD_CLOG(WARNING, "lseek for superblock frame %u yields: %s",
+                    nextFrame, strerror(errno));
+            }
+            size_t r = ::fwrite(block.get(), 1, BLOCK_SIZE, fds[0]);
             // An accurate superblock is required to determine if replicas
             // should be preserved at startup.  Without it any replicas
             // written by this backup would be in jeopardy.
-            if (r == -1) {
+            if (r == 0) {
+                RAMCLOUD_CLOG(WARNING, "Offset for superblock: %lu", offset);
                 DIE("Failed to write the backup superblock; "
                     "cannot continue safely: %s", strerror(errno));
             } else if (r < BLOCK_SIZE) {
+                RAMCLOUD_CLOG(WARNING, "Offset for superblock: %lu, r = %lu", offset, r);
                 DIE("Short write while writing the backup superblock; "
                     "cannot continue safely");
             }
-            int s = fdatasync(fds[0]);
+            int s = fdatasync(::fileno(fds[0]));
             if (s == -1 && !usingDevNull) {
                 DIE("Failed to flush the backup superblock; "
                     "cannot continue safely: %s", strerror(errno));
@@ -1490,8 +1502,14 @@ MultiFileStorage::tryLoadSuperblock(uint32_t superblockFrame)
         Crc32C::ResultType checksum;
     } __attribute__((packed));
     uint64_t offset = offsetOfSuperblockFrame(superblockFrame);
-    ssize_t r = pread(fds[0], block.get(), BLOCK_SIZE, offset);
-    if (r == -1) {
+    int seek_status = ::fseek(fds[0], offset, SEEK_SET);
+    if (seek_status < 0) {
+        RAMCLOUD_CLOG(WARNING, "lseek for superblock frame %u yields: %s",
+            superblockFrame, strerror(errno));
+        return {};
+    }
+    size_t r = ::fread(block.get(), 1, BLOCK_SIZE, fds[0]);
+    if (r == 0) {
         LOG(NOTICE, "Couldn't read superblock from superblock frame %u: %s",
             superblockFrame, strerror(errno));
         return {};

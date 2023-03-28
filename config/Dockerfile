@@ -70,3 +70,20 @@ RUN cd /usr/include \
  && ninja install
 
 ENV GTEST_DIR="/usr/include/googletest-release-${GTEST_VERSION}/googletest"
+
+ENV MIMALLOC_VERSION=2.0.9
+RUN cd /usr/local/src \
+ && wget \
+     --quiet \
+     --output-document=- \
+     "https://github.com/microsoft/mimalloc/archive/refs/tags/v${MIMALLOC_VERSION}.tar.gz" \
+  | tar --extract --gz --directory=. \
+ && mkdir -p "/usr/local/include/mimalloc" \
+ && cd "mimalloc-${MIMALLOC_VERSION}/include" \
+ && cp -r * "/usr/local/include/mimalloc" \
+ && mkdir -p "/usr/local/lib/mimalloc" \
+ && cd "/usr/local/lib/mimalloc" \
+ && cmake -DMI_SECURE=ON "/usr/local/src/mimalloc-${MIMALLOC_VERSION}" \
+ && make
+
+ENV LD_PRELOAD="/usr/local/lib/mimalloc/libmimalloc-secure.so"

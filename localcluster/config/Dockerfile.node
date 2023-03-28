@@ -227,4 +227,5 @@ ENV PATH=$PATH:/$DISTRO_NAME/bin \
 COPY ./localcluster/config/docker-entrypoint.sh /
 COPY ./install /usr/local
 COPY ./localcluster/config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+ENV LD_PRELOAD="/usr/local/lib/mimalloc/libmimalloc-secure.so"
 ENTRYPOINT ["/usr/bin/supervisord"]

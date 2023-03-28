@@ -888,7 +888,7 @@ TEST_F(MultiFileStorageTest, tryLoadSuperblock) {
 }
 
 TEST_F(MultiFileStorageTest, tryLoadSuperblockCannotReadFile) {
-    close(storage1->fds[0]);
+    fclose(storage1->fds[0]);
     TestLog::Enable _;
     auto superblock = storage1->tryLoadSuperblock(0);
     ASSERT_FALSE(superblock);
@@ -909,11 +909,13 @@ TEST_F(MultiFileStorageTest, tryLoadSuperblockBadChecksum) {
     Memory::unique_ptr_free buffer(
         Memory::xmemalign(HERE, getpagesize(), BLOCK_SIZE),
         std::free);
+    EXPECT_GE(fseek(storage1->fds[0], 0, SEEK_SET), 0);
     ASSERT_EQ(BLOCK_SIZE,
-              pread(storage1->fds[0], buffer.get(), BLOCK_SIZE, 0));
+              fread(buffer.get(), 1, BLOCK_SIZE, storage1->fds[0]));
     static_cast<char*>(buffer.get())[0] = ' ';
-    ASSERT_EQ(BLOCK_SIZE, pwrite(storage1->fds[0], buffer.get(),
-                                 BLOCK_SIZE, 0));
+    EXPECT_GE(fseek(storage1->fds[0], 0, SEEK_SET), 0);
+    ASSERT_EQ(BLOCK_SIZE,
+              fwrite(buffer.get(), 1, BLOCK_SIZE, storage1->fds[0]));
     auto superblock = storage1->tryLoadSuperblock(0);
     ASSERT_FALSE(superblock);
     EXPECT_EQ("tryLoadSuperblock: Stored superblock had a bad checksum: "
