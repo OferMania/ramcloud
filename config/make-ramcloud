@@ -128,6 +128,10 @@ mv install/bin/server      install/bin/rc-server
 # Move the libraries to the correct place instead of in the ramcloud subdirectory.
 mv install/lib/ramcloud/* install/lib && rmdir install/lib/ramcloud
 
+# Copy libmimalloc-secure object files to override malloc/free/new/delete
+mkdir -p install/lib/mimalloc
+cp -r /usr/local/lib/mimalloc/* install/lib/mimalloc
+
 # Build the proto files so we can read what RAMCloud puts in ZooKeeper.
 cd src
 PROTO_OUT=/src/ramcloud/bindings/python
