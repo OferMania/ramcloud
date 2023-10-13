@@ -46,13 +46,15 @@ class RuntimeOptions {
         uint32_t popFailRecoveryMasters();
         void checkAndCrashCoordinator(const char *crashPoint);
 
-    PRIVATE:
         /**
          * Interface for all configuration option parsers. Generally
          * parsers should subclass this and add a constructor which
          * grabs a reference to a specific field. parse() should have
          * the side effect of populating that field from the given
          * string argument.
+         *
+         * This interface is public so we can have objects implement
+         * Parseable outside of the RuntimeOptions class.
          */
         struct Parseable {
             virtual void parse(const char* args) = 0;
@@ -60,6 +62,7 @@ class RuntimeOptions {
             virtual ~Parseable() {}
         };
 
+    PRIVATE:
         void registerOption(const char* option, Parseable* parser);
 
         /**

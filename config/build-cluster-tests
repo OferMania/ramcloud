@@ -1,0 +1,3 @@
+#!/bin/bash -ex
+
+docker build /src/ramcloud -f /src/ramcloud/localcluster/config/Dockerfile.node -t ramcloud-test

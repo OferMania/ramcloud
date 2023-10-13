@@ -118,7 +118,7 @@ cd /src/ramcloud
 
 # Build RAMCloud.
 rm -rf install
-make --jobs=$(($(nproc) + ${NPROC_INC})) install BUILD_TYPE="${BUILD_TYPE}" DPDK="${USE_DPDK}" ARCH="${ARCH}" EXTRALIBS="${EXTRA_LIBS}"
+make --jobs=$(($(nproc) + "${NPROC_INC}")) install BUILD_TYPE="${BUILD_TYPE}" DPDK="${USE_DPDK}" ARCH="${ARCH}" EXTRALIBS="${EXTRA_LIBS}"
 
 # Rename the binaries to something a little more descriptive.
 mv install/bin/coordinator install/bin/rc-coordinator
@@ -135,6 +135,6 @@ cp -r /usr/local/lib/mimalloc/* install/lib/mimalloc
 # Build the proto files so we can read what RAMCloud puts in ZooKeeper.
 cd src
 PROTO_OUT=/src/ramcloud/bindings/python
-for proto_file in $(ls *.proto); do
-  python3 -m grpc_tools.protoc -I. --python_out=${PROTO_OUT} --grpc_python_out=${PROTO_OUT} ${proto_file}
+for proto_file in *.proto; do
+  protoc -I=. --python_out=${PROTO_OUT} ${proto_file}
 done
