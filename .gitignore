@@ -32,6 +32,9 @@ tags
 /.idea/
 /nbproject/
 
+# Ignore VSCode files
+.vscode
+
 # CMake
 CMakeLists.txt
 cmake-*/
@@ -39,3 +42,7 @@ cmake-*/
 # Local Cluster
 __pycache__/
 tmp/
+
+# Virtual Environment
+venv/
+config/venv/

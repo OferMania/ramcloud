@@ -5,11 +5,11 @@
 #   * Change FROM from "openjdk:8-jre-slim" to "debian:buster"
 #   * Install openjdk-11-jre-headless
 #   * Change local location of docker-entrypoint.sh from 'docker-entrypoint.sh' to 'config/docker-entrypoint.sh'
-FROM debian:bullseye as zookeeper
+FROM debian:bookworm as zookeeper
 
 ENV BOOST_VERSION="1.74.0" \
-    PROTO_VERSION=23 \
-    CLANG_VERSION="11"
+    PROTO_VERSION=32 \
+    CLANG_VERSION="14"
 
 ENV ZOO_CONF_DIR="/conf" \
     ZOO_DATA_DIR="/data" \
@@ -79,7 +79,7 @@ RUN apt-get update \
 
 RUN apt-get update \
  && apt-get install --yes \
-      libpcre++-dev \
+      libpcre3-dev \
  && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update \
@@ -169,7 +169,7 @@ RUN apt-get update \
 
 RUN apt-get update \
  && apt-get install --yes \
-      openjdk-11-jre-headless \
+      openjdk-17-jre-headless \
  && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update \
@@ -227,5 +227,8 @@ ENV PATH=$PATH:/$DISTRO_NAME/bin \
 COPY ./localcluster/config/docker-entrypoint.sh /
 COPY ./install /usr/local
 COPY ./localcluster/config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-ENV LD_PRELOAD="/usr/local/lib/mimalloc/libmimalloc-secure.so"
+## Note: mimalloc was causing some occasional crashes in the tests, so its preload has been
+## disabled until we can investigate and fix the issue.
+##
+## ENV LD_PRELOAD="/usr/local/lib/mimalloc/libmimalloc-secure.so"
 ENTRYPOINT ["/usr/bin/supervisord"]

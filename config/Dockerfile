@@ -1,10 +1,9 @@
 # Install the dependencies required to build RAMCloud and run the RAMCloud tests. This is used as the development
 # environment.
-FROM debian:bullseye
+FROM debian:bookworm
 WORKDIR /src/ramcloud
 RUN apt-get update \
  && apt-get install --yes \
-      2to3 \
       apt-transport-https \
       build-essential \
       ca-certificates \
@@ -18,7 +17,7 @@ RUN apt-get update \
       libboost-program-options-dev \
       libboost-system-dev \
       libibverbs-dev \
-      libpcre++-dev \
+      libpcre3-dev \
       libssl-dev \
       libzookeeper-mt-dev \
       ninja-build \
@@ -26,15 +25,15 @@ RUN apt-get update \
       procps \
       protobuf-compiler \
       python3 \
+      python3-grpc-tools \
       python3-pip \
+      python3-venv \
       software-properties-common \
       stgit \
       vim \
-      # wget is great for troubleshooting zookeeper installations
-      wget \
+      wget `# wget is great for troubleshooting zookeeper installations` \
  && apt-get clean \
- && rm -rf /var/lib/apt/lists/* \
- && pip3 install pipenv
+ && rm -rf /var/lib/apt/lists/*
 
 # Install python3 pip packages and logging for talking with ramcloud-test
 RUN mkdir --parent /tmp/pip \
@@ -45,13 +44,16 @@ COPY ./config/Pipfile      /tmp/pip/
 COPY ./config/Pipfile.lock /tmp/pip/
 COPY ./config/log.ini      /src/testing/
 RUN cd /tmp/pip \
- && pipenv install --system --deploy
+ && python3 -m venv venv \
+ && . venv/bin/activate \
+ && pipenv install --deploy
+ENV PATH=/tmp/pip/venv/bin:$PATH
 
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add - \
- && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian bullseye stable" \
+ && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian bookworm stable" \
  && apt-get update \
  && apt-get install --yes \
-      docker-ce \
+      docker.io docker-compose \
  && rm -rf /var/lib/apt/lists/*
 ENV PYTHONPATH=/src/ramcloud/bindings/python:/src/ramcloud/localcluster/src:/src/ramcloud/localcluster/testing
 ENV LD_LIBRARY_PATH=/src/ramcloud/install/lib
@@ -71,7 +73,7 @@ RUN cd /usr/include \
 
 ENV GTEST_DIR="/usr/include/googletest-release-${GTEST_VERSION}/googletest"
 
-ENV MIMALLOC_VERSION=2.0.9
+ENV MIMALLOC_VERSION=2.1.2
 RUN cd /usr/local/src \
  && wget \
      --quiet \
@@ -86,4 +88,7 @@ RUN cd /usr/local/src \
  && cmake -DMI_SECURE=ON "/usr/local/src/mimalloc-${MIMALLOC_VERSION}" \
  && make
 
-ENV LD_PRELOAD="/usr/local/lib/mimalloc/libmimalloc-secure.so"
+## Note: mimalloc was causing some occasional crashes in the tests, so its preload has been
+## disabled until we can investigate and fix the issue.
+##
+## ENV LD_PRELOAD="/usr/local/lib/mimalloc/libmimalloc-secure.so"

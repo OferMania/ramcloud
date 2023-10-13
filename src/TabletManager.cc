@@ -248,9 +248,10 @@ TabletManager::deleteTablet(uint64_t tableId,
         throw InternalError(HERE, STATUS_INTERNAL_ERROR);
     }
 
+    TabletState tState = t->state;
     tabletMap.erase(it);
 
-    if (t->state == TabletState::NOT_READY) {
+    if (tState == TabletState::NOT_READY) {
         numLoadingTablets--;
     }
 

@@ -26,3 +26,28 @@ The RAMCloud project is based in the Department of Computer Science at Stanford 
 
 # Learn More about RAMCloud
 https://ramcloud.atlassian.net/wiki/spaces/RAM/overview
+
+# Linux Local Desktop Development Quick Start
+Run the following to bring up the dev environment:
+```shell
+$ ./dev-env
+```
+
+From dev-env, run the following to build the c++ ramcloud code:
+```shell
+$ ./config/make-ramcloud
+```
+
+From dev-env, run the following to build the local test cluster:
+```shell
+$ ./config/build-cluster-tests
+```
+
+From dev-env, run the following to run tests on the cluster, including fault-tolerance:
+```shell
+$ ./config/run-cluster-tests
+```
+
+There's also a script for unit tests in the config folder, but it isn't working at the moment. Anyone brave enough to attempt to fix it is most welcome to try.
+
+If you're trying to rebuild RamCloud clean, it might be helpful to remove the obj and obj.* directories first (located under /src/ramcloud when you're in the dev-env)

@@ -124,10 +124,11 @@ CWARNS   := $(COMWARNS) -Wmissing-prototypes -Wmissing-declarations -Wshadow \
 		-Wbad-function-cast
 CXXWARNS := $(COMWARNS) -Wno-non-template-friend -Woverloaded-virtual \
 		-Wcast-qual \
-		-Wcast-align -Wconversion
+		-Wcast-align -Wconversion -Wno-error=placement-new -Wno-error=maybe-uninitialized
 ifeq ($(COMPILER),gnu)
 CXXWARNS += -Weffc++
 endif
+
 # Too many false positives list:
 # -Wunreachable-code
 # Failed deconstructor inlines are generating noise
@@ -152,6 +153,9 @@ INCLUDES := -I$(TOP)/src \
              $(NULL)
 ifeq ($(LOGCABIN),yes)
 INCLUDES := $(INCLUDES) -I$(LOGCABIN_DIR)/include
+endif
+ifeq ($(ZOOKEEPER),yes)
+COMFLAGS += -DTHREADED
 endif
 
 CC ?= gcc

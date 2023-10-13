@@ -1046,7 +1046,7 @@ coordinatorRecovery()
 {
     if (clientIndex != 0)
         return;
-    int i;
+    int i = 0;
     std::thread ramcloudOpsThread(coordTestFunction, i);
     ramcloudOpsThread.join();
     RAMCLOUD_LOG(NOTICE, "All children done, Main thread exiting\n");
